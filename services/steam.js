@@ -101,3 +101,13 @@ export async function getSteamGameDetails(appId) {
     overview: data.short_description || data.detailed_description || ''
   };
 }
+
+export async function testSteamConnection() {
+  const url = 'https://store.steampowered.com/api/appdetails?appids=105600&l=french';
+  const res = await safeFetch(url);
+  if (!res.ok) {
+    throw new Error(`Steam Store (${res.status}): ${res.statusText}`);
+  }
+  return true;
+}
+

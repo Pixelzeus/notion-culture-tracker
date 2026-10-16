@@ -10,9 +10,9 @@ import {
   NOTION_KNOWN_YEARS,
   DEFAULT_CONFIG
 } from '../services/config.js';
-import { searchMedia, getMediaDetails } from '../services/tmdb.js';
+import { searchMedia, getMediaDetails, testTmdbConnection } from '../services/tmdb.js';
 import { searchTheGamesDb, getTheGamesDbDetails } from '../services/thegamesdb.js';
-import { searchSteamGames, getSteamGameDetails } from '../services/steam.js';
+import { searchSteamGames, getSteamGameDetails, testSteamConnection } from '../services/steam.js';
 import {
   createMediaPage,
   testNotionConnection,
@@ -110,8 +110,7 @@ const dom = {
   settingPlatformsDb: document.getElementById('settingPlatformsDb'),
   settingYearlyReviewDb: document.getElementById('settingYearlyReviewDb'),
   settingsFeedback: document.getElementById('settingsFeedback'),
-  btnTestNotion: document.getElementById('btnTestNotion'),
-  btnTestGamesDb: document.getElementById('btnTestGamesDb'),
+  btnTestAllApis: document.getElementById('btnTestAllApis'),
   bannerPerms: document.getElementById('bannerPerms')
 };
 
@@ -297,9 +296,8 @@ function setupEventListeners() {
 
   dom.importForm.addEventListener('submit', handleImportSubmit);
   dom.settingsForm.addEventListener('submit', handleSaveSettings);
-  dom.btnTestNotion.addEventListener('click', handleTestNotion);
-  if (dom.btnTestGamesDb) {
-    dom.btnTestGamesDb.addEventListener('click', handleTestGamesDb);
+  if (dom.btnTestAllApis) {
+    dom.btnTestAllApis.addEventListener('click', handleTestAllApis);
   }
   if (dom.bannerPerms) {
     dom.bannerPerms.addEventListener('click', async () => {
@@ -766,58 +764,62 @@ async function handleSaveSettings(e) {
   }
 }
 
-// Test de la connexion Notion
-async function handleTestNotion() {
+// Test de toutes les connexions d'APIs en une seule fois
+async function handleTestAllApis() {
   const tempConfig = {
     ...state.config,
+    tmdbApiKey: dom.settingTmdbKey.value.trim() || DEFAULT_CONFIG.tmdbApiKey,
     notionApiKey: dom.settingNotionKey.value.trim() || DEFAULT_CONFIG.notionApiKey,
+    gamesDbApiKey: dom.settingGamesDbKey.value.trim() || DEFAULT_CONFIG.gamesDbApiKey,
     moviesDbId: dom.settingMoviesDb.value.trim() || DEFAULT_CONFIG.moviesDbId
   };
 
-  dom.btnTestNotion.disabled = true;
-  dom.btnTestNotion.textContent = 'Test en cours...';
+  dom.btnTestAllApis.disabled = true;
+  dom.btnTestAllApis.textContent = '⏳ Tests en cours...';
+  showSettingsFeedback('Vérification de toutes les APIs...', 'warning');
 
-  try {
-    await testNotionConnection(tempConfig);
-    showSettingsFeedback('Connexion Notion réussie ! Bases accessibles.', 'success');
-  } catch (err) {
-    showSettingsFeedback(`Échec Notion: ${err.message}`, 'error');
-  } finally {
-    dom.btnTestNotion.disabled = false;
-    dom.btnTestNotion.textContent = 'Tester Notion';
-  }
-}
+  const [tmdbRes, notionRes, gamesDbRes, steamRes] = await Promise.allSettled([
+    testTmdbConnection(tempConfig),
+    testNotionConnection(tempConfig),
+    testGamesDbConnection(tempConfig),
+    testSteamConnection()
+  ]);
 
-// Test de la connexion TheGamesDB
-async function handleTestGamesDb() {
-  const tempConfig = {
-    ...state.config,
-    gamesDbApiKey: dom.settingGamesDbKey.value.trim() || DEFAULT_CONFIG.gamesDbApiKey
-  };
+  const items = [
+    { name: 'TMDb (Films & Séries)', res: tmdbRes, okText: 'Clé valide & API accessible' },
+    { name: 'Notion (Bases de données)', res: notionRes, okText: 'Clé valide & bases accessibles' },
+    { name: 'TheGamesDB (Jeux vidéo)', res: gamesDbRes, okText: 'Clé valide & catalogue accessible' },
+    { name: 'Steam (Storefront PC)', res: steamRes, okText: 'Store accessible (aucune clé requise)' }
+  ];
 
-  dom.btnTestGamesDb.disabled = true;
-  dom.btnTestGamesDb.textContent = 'Test...';
-
-  try {
-    await testGamesDbConnection(tempConfig);
-    showSettingsFeedback('Connexion TheGamesDB réussie ! Clé valide.', 'success');
-  } catch (err) {
-    // Si c'est une erreur réseau (NetworkError) due aux permissions MV3 de Firefox
-    if (typeof browser !== 'undefined' && browser.permissions && browser.permissions.request) {
-      try {
-        const granted = await requestAllHostPermissions();
-        if (granted) {
-          await testGamesDbConnection(tempConfig);
-          showSettingsFeedback('Autorisations accordées et connexion TheGamesDB réussie !', 'success');
-          return;
-        }
-      } catch {}
+  let successCount = 0;
+  const lines = items.map(item => {
+    if (item.res.status === 'fulfilled') {
+      successCount++;
+      return `<div style="margin: 3px 0;"><strong>${item.name}</strong> : <span style="color: #10b981; font-weight: 600;">✅ Connecté</span> <span style="color: var(--text-secondary); font-size: 11px;">(${item.okText})</span></div>`;
+    } else {
+      const errMsg = escapeHtml(item.res.reason?.message || 'Erreur inconnue');
+      return `<div style="margin: 3px 0;"><strong>${item.name}</strong> : <span style="color: #ef4444; font-weight: 600;">❌ Échec</span> <span style="color: #fca5a5; font-size: 11px;">(${errMsg})</span></div>`;
     }
-    showSettingsFeedback(`Échec TheGamesDB: ${err.message}`, 'error');
-  } finally {
-    dom.btnTestGamesDb.disabled = false;
-    dom.btnTestGamesDb.textContent = 'Tester TheGamesDB';
-  }
+  });
+
+  const allOk = successCount === items.length;
+  const anyOk = successCount > 0;
+  const feedbackType = allOk ? 'success' : anyOk ? 'warning' : 'error';
+
+  const html = `
+    <div style="font-size: 12px; line-height: 1.5;">
+      <div style="font-weight: 700; margin-bottom: 6px; font-size: 13px;">
+        ${allOk ? '🎉 Toutes les APIs sont opérationnelles !' : `⚠️ ${successCount}/${items.length} APIs opérationnelles :`}
+      </div>
+      ${lines.join('')}
+    </div>
+  `;
+
+  showSettingsFeedback(html, feedbackType, true);
+
+  dom.btnTestAllApis.disabled = false;
+  dom.btnTestAllApis.textContent = '🔍 Tester toutes les APIs';
 }
 
 // Vérification proactive des autorisations d'hôtes Firefox
@@ -874,9 +876,13 @@ function showErrorAlert(msg) {
   dom.statusAlert.style.display = 'block';
 }
 
-function showSettingsFeedback(msg, type) {
+function showSettingsFeedback(msg, type, isHtml = false) {
   dom.settingsFeedback.className = `alert-box alert-${type}`;
-  dom.settingsFeedback.textContent = msg;
+  if (isHtml) {
+    dom.settingsFeedback.innerHTML = msg;
+  } else {
+    dom.settingsFeedback.textContent = msg;
+  }
   dom.settingsFeedback.style.display = 'block';
 }
 

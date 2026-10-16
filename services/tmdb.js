@@ -111,3 +111,16 @@ export async function getMediaDetails(id, mediaType, config) {
     suggestedProviders
   };
 }
+
+export async function testTmdbConnection(config) {
+  const apiKey = (config && config.tmdbApiKey)?.trim();
+  if (!apiKey) throw new Error('Clé API TMDb manquante.');
+  const url = `${TMDB_BASE_URL}/configuration?api_key=${encodeURIComponent(apiKey)}`;
+  const res = await safeFetch(url);
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`TMDb (${res.status}): ${errText || res.statusText}`);
+  }
+  return true;
+}
+
