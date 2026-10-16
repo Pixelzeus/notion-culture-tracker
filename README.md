@@ -38,6 +38,8 @@ Renseignez vos clés d'API dans l'onglet **Paramètres** de l'extension :
 * **Steam Storefront API** : recherche et complétion de jeux vidéo PC Steam (aucune clé requise).
 * **Notion API** : création automatique des entrées et application des modèles de page ([Créer une intégration Notion](https://www.notion.so/my-integrations)).
 
+> 💡 **Bouton « 🔍 Tester toutes les APIs »** : Dans l'onglet **Paramètres**, ce bouton exécute en parallèle les tests de connectivité pour TMDb, Notion, TheGamesDB et Steam et affiche instantanément un diagnostic complet de vos accès.
+
 ---
 
 ## 📄 Application des Templates de Page Notion
