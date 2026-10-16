@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Culture Tracker</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="app-header">
+    <div class="brand">
+      <img src="../icons/icon-32.png" alt="Logo" class="brand-icon">
+      <div class="brand-text">
+        <h1>Culture Tracker</h1>
+        <span class="subtitle">TMDb, TheGamesDB & Steam &rarr; Notion</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button id="btnSettings" class="icon-button" title="Paramètres" aria-label="Paramètres">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="app-body">
+    <!-- VIEW 1: SEARCH VIEW -->
+    <section id="viewSearch" class="view active">
+      <div id="bannerPerms" class="alert-box alert-warning" style="display: none; cursor: pointer; margin-bottom: 12px; font-size: 11px; line-height: 1.4;">
+        ⚠️ <strong>Permissions Firefox :</strong> Cliquez ici pour autoriser l'accès aux APIs (TheGamesDB, Steam, TMDb).
+      </div>
+
+      <div class="search-box">
+        <div class="input-wrapper">
+          <svg class="search-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="searchInput" placeholder="Rechercher un film, une série ou un jeu..." autofocus autocomplete="off">
+          <button id="btnClearSearch" class="clear-btn" style="display: none;">&times;</button>
+        </div>
+      </div>
+
+      <div class="filter-tabs">
+        <button class="tab active" data-type="all">Tous</button>
+        <button class="tab" data-type="movie">🎥 Films</button>
+        <button class="tab" data-type="tv">📺 Séries</button>
+        <button class="tab" data-type="game">🎮 Jeux</button>
+      </div>
+
+      <div id="statusAlert" class="alert-box" style="display: none;"></div>
+
+      <div id="resultsList" class="results-container">
+        <div class="empty-state">
+          <span class="empty-emoji">🍿</span>
+          <p>Tapez le nom d'un film, d'une série ou d'un jeu vidéo pour l'importer dans Notion avec son template de page.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 2: DETAIL / CUSTOMIZE VIEW -->
+    <section id="viewDetail" class="view">
+      <div class="detail-header-nav">
+        <button id="btnBackToSearch" class="nav-back-btn">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+          Retour aux résultats
+        </button>
+      </div>
+
+      <div class="banner-preview" id="bannerPreview">
+        <img id="detailPoster" class="floating-poster" src="" alt="Affiche">
+      </div>
+
+      <div class="detail-content">
+        <div class="title-section">
+          <h2 id="detailTitle">Titre</h2>
+          <div class="meta-tags">
+            <span id="detailBadgeType" class="badge">Film</span>
+            <span id="detailYear" class="meta-year">2024</span>
+            <span id="detailVote" class="meta-rating">⭐ 8.1</span>
+          </div>
+          <p id="detailOriginalTitle" class="original-title"></p>
+        </div>
+
+        <form id="importForm" class="import-form">
+          <!-- Template Notice -->
+          <div class="template-notice">
+            <label class="template-checkbox-label">
+              <input type="checkbox" id="checkUseTemplate" checked>
+              <span class="template-title">📄 Appliquer le template de page Notion</span>
+            </label>
+            <p id="templateDescription" class="template-subtext">Crée la structure à 2 colonnes avec l'affiche, les captures d'écran et le résumé pré-rempli.</p>
+          </div>
+
+          <!-- Type (for TV shows: TV show or Anime) -->
+          <div class="form-group" id="groupTvType" style="display: none;">
+            <label class="form-label">Sous-type de série</label>
+            <div class="radio-group">
+              <label class="radio-chip">
+                <input type="radio" name="tvSubType" value="📺 TV show" checked>
+                <span>📺 Série TV</span>
+              </label>
+              <label class="radio-chip">
+                <input type="radio" name="tvSubType" value="🎨 Anime">
+                <span>🎨 Animé</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Movies / TV: Watch Status -->
+          <div class="form-group" id="groupWatchStatus">
+            <label for="selectStatus" class="form-label">Statut de visionnage</label>
+            <select id="selectStatus" class="form-select">
+              <option value="🔵 To Watch" selected>🔵 À regarder (To Watch)</option>
+              <option value="🟢 Watching">🟢 En cours (Watching)</option>
+              <option value="🟤 Watched">🟤 Terminé / Vu (Watched)</option>
+              <option value="🔴 Abandoned">🔴 Abandonné</option>
+            </select>
+          </div>
+
+          <!-- Games: Game Status -->
+          <div class="form-group" id="groupGameStatus" style="display: none;">
+            <label for="selectGameStatus" class="form-label">Statut du jeu</label>
+            <select id="selectGameStatus" class="form-select">
+              <option value="Want To Play" selected>Want To Play</option>
+              <option value="Playing Now">Playing Now</option>
+              <option value="Game Complete">Game Complete</option>
+              <option value="Tested">Tested</option>
+              <option value="Stopped Playing">Stopped Playing</option>
+              <option value="Want To Replay">Want To Replay</option>
+              <option value="Unreleased">Unreleased</option>
+              <option value="On Hold">On Hold</option>
+            </select>
+          </div>
+
+          <!-- Games: Player Support & Copy -->
+          <div class="form-row" id="rowGameMeta" style="display: none;">
+            <div class="form-group flex-1">
+              <label for="inputPlayerSupport" class="form-label">Modes de jeu</label>
+              <input type="text" id="inputPlayerSupport" class="form-input" placeholder="Singleplayer, Co-op...">
+            </div>
+            <div class="form-group flex-1">
+              <label for="selectGameCopy" class="form-label">Support / Copie</label>
+              <select id="selectGameCopy" class="form-select">
+                <option value="Digital Copy" selected>Digital Copy</option>
+                <option value="Physical Copy">Physical Copy</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Episodes Row (Only for TV) -->
+          <div class="form-row" id="rowEpisodes" style="display: none;">
+            <div class="form-group flex-1">
+              <label for="inputCurrentEp" class="form-label">Épisode actuel</label>
+              <input type="number" id="inputCurrentEp" class="form-input" min="0" value="0">
+            </div>
+            <div class="form-group flex-1">
+              <label for="inputTotalEp" class="form-label">Total épisodes</label>
+              <input type="number" id="inputTotalEp" class="form-input" min="0" value="0">
+            </div>
+            <div class="form-group flex-auto-btn">
+              <label class="form-label">&nbsp;</label>
+              <button type="button" id="btnAllCaughtUp" class="secondary-btn" title="Marquer tous les épisodes comme vus">Tout vu</button>
+            </div>
+          </div>
+
+          <!-- Rating & Coup de coeur -->
+          <div class="form-row">
+            <div class="form-group flex-2">
+              <label class="form-label" id="labelRating">Ma note</label>
+              <div class="stars-picker" id="starsPicker">
+                <button type="button" class="star" data-rating="⭐">★</button>
+                <button type="button" class="star" data-rating="⭐⭐">★</button>
+                <button type="button" class="star" data-rating="⭐⭐⭐">★</button>
+                <button type="button" class="star" data-rating="⭐⭐⭐⭐">★</button>
+                <button type="button" class="star" data-rating="⭐⭐⭐⭐⭐">★</button>
+                <button type="button" id="btnClearRating" class="clear-star" title="Effacer la note">&times;</button>
+              </div>
+            </div>
+            <div class="form-group flex-1 favourite-wrapper">
+              <label class="form-label">&nbsp;</label>
+              <label class="favourite-checkbox" title="Marquer en favori">
+                <input type="checkbox" id="checkFavourite">
+                <span class="heart-icon">♥</span>
+                <span class="favourite-text">Favori</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Platform & Date Viewed (For movies, series and games) -->
+          <div class="form-row" id="rowPlatformDate">
+            <div class="form-group flex-1">
+              <label for="selectPlatform" class="form-label" id="labelPlatform">Plateforme</label>
+              <select id="selectPlatform" class="form-select">
+                <option value="">(Aucune)</option>
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="inputDateViewed" class="form-label" id="labelDateViewed">Date vue / jouée</label>
+              <input type="date" id="inputDateViewed" class="form-input">
+            </div>
+          </div>
+
+          <!-- Bilan Annuel (Year Watch / Year Played) -->
+          <div class="form-group">
+            <label for="selectYearWatch" class="form-label" id="labelYearWatch">Lier au Bilan Annuel (Yearly Review)</label>
+            <select id="selectYearWatch" class="form-select">
+              <option value="">(Ne pas lier)</option>
+            </select>
+          </div>
+
+          <!-- Cover Image Option -->
+          <div class="form-group">
+            <label class="form-label">Image de couverture Notion</label>
+            <div class="radio-group">
+              <label class="radio-chip">
+                <input type="radio" name="coverChoice" value="backdrop" checked>
+                <span>Bannière paysage (16:9)</span>
+              </label>
+              <label class="radio-chip">
+                <input type="radio" name="coverChoice" value="poster">
+                <span>Affiche portrait</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Genres Tags (Movies, Series & Games) -->
+          <div class="form-group" id="groupGenres">
+            <label class="form-label" id="labelGenres">Genres associés</label>
+            <div id="genresTagsList" class="tags-container"></div>
+          </div>
+
+          <!-- Casts (Only for movies/series) -->
+          <div class="form-group" id="groupCasts">
+            <label for="inputCasts" class="form-label">Casting (séparé par des virgules)</label>
+            <input type="text" id="inputCasts" class="form-input" placeholder="Tom Hanks, Robin Wright...">
+          </div>
+
+          <!-- Game Summary (Uniquement pour le template de page) -->
+          <div class="form-group" id="groupGameSummary" style="display: none;">
+            <label for="textGameSummary" class="form-label">Résumé du jeu (dans la colonne droite de la page)</label>
+            <textarea id="textGameSummary" class="form-textarea" rows="3" placeholder="Résumé qui apparaîtra dans le corps de la page..."></textarea>
+          </div>
+
+          <!-- Notes / Synopsis -->
+          <div class="form-group" id="groupNotes">
+            <label for="textNotes" class="form-label" id="labelNotes">Synopsis / Description</label>
+            <textarea id="textNotes" class="form-textarea" rows="3" placeholder="Résumé..."></textarea>
+          </div>
+
+          <!-- Submit Button -->
+          <div class="form-actions">
+            <button type="submit" id="btnSubmitImport" class="primary-btn">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              Ajouter dans Notion
+            </button>
+          </div>
+        </form>
+
+        <div id="successCard" class="success-card" style="display: none;">
+          <div class="success-message">
+            <span class="success-icon">✓</span>
+            <div>
+              <strong>Ajouté avec succès !</strong>
+              <p>L'élément et son template ont été créés dans Notion.</p>
+            </div>
+          </div>
+          <a id="btnOpenInNotion" href="#" target="_blank" class="notion-link-btn">
+            Ouvrir dans Notion &rarr;
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 3: SETTINGS VIEW -->
+    <section id="viewSettings" class="view">
+      <div class="detail-header-nav">
+        <button id="btnBackFromSettings" class="nav-back-btn">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+          Retour
+        </button>
+      </div>
+
+      <div class="settings-content">
+        <h2>Paramètres & Connexion</h2>
+        <p class="settings-intro">Vos clés et identifiants de bases de données Notion.</p>
+
+        <form id="settingsForm">
+          <div class="form-group">
+            <label for="settingTmdbKey" class="form-label">Clé API TMDb (v3)</label>
+            <input type="password" id="settingTmdbKey" class="form-input" placeholder="Votre clé API TMDb (v3)...">
+          </div>
+
+          <div class="form-group">
+            <label for="settingNotionKey" class="form-label">Clé API Notion (Internal Token)</label>
+            <input type="password" id="settingNotionKey" class="form-input" placeholder="Votre clé secrète Notion (secret_... / ntn_...)">
+          </div>
+
+          <div class="form-group">
+            <label for="settingGamesDbKey" class="form-label">Clé API TheGamesDB</label>
+            <input type="password" id="settingGamesDbKey" class="form-input" placeholder="Votre clé API TheGamesDB...">
+          </div>
+
+          <div class="settings-divider">Identifiants des bases Notion</div>
+
+          <div class="form-group">
+            <label for="settingMoviesDb" class="form-label">ID Base "All Movies"</label>
+            <input type="text" id="settingMoviesDb" class="form-input" placeholder="312aec4b...">
+          </div>
+
+          <div class="form-group">
+            <label for="settingTvShowsDb" class="form-label">ID Base "All TV Shows"</label>
+            <input type="text" id="settingTvShowsDb" class="form-input" placeholder="312aec4b...">
+          </div>
+
+          <div class="form-group">
+            <label for="settingGamesDb" class="form-label">ID Base "All Games"</label>
+            <input type="text" id="settingGamesDb" class="form-input" placeholder="312aec4b...">
+          </div>
+
+          <div class="form-group">
+            <label for="settingGamePlatformsDb" class="form-label">ID Base "Game Platform"</label>
+            <input type="text" id="settingGamePlatformsDb" class="form-input" placeholder="312aec4b...">
+          </div>
+
+          <div class="form-group">
+            <label for="settingGameGenresDb" class="form-label">ID Base "Game Genres"</label>
+            <input type="text" id="settingGameGenresDb" class="form-input" placeholder="312aec4b...">
+          </div>
+
+          <div class="form-group">
+            <label for="settingGenresDb" class="form-label">ID Base "Genres" (Films/Séries)</label>
+            <input type="text" id="settingGenresDb" class="form-input" placeholder="312aec4b...">
+          </div>
+
+          <div class="form-group">
+            <label for="settingPlatformsDb" class="form-label">ID Base "Platforms" (Streaming/Films)</label>
+            <input type="text" id="settingPlatformsDb" class="form-input" placeholder="312aec4b...">
+          </div>
+
+          <div class="form-group">
+            <label for="settingYearlyReviewDb" class="form-label">ID Base "Yearly Review"</label>
+            <input type="text" id="settingYearlyReviewDb" class="form-input" placeholder="312aec4b...">
+          </div>
+
+          <div id="settingsFeedback" class="alert-box" style="display: none;"></div>
+
+          <div class="settings-actions">
+            <button type="button" id="btnTestNotion" class="secondary-btn">Tester Notion</button>
+            <button type="button" id="btnTestGamesDb" class="secondary-btn">Tester TheGamesDB</button>
+            <button type="submit" class="primary-btn">Enregistrer</button>
+          </div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
