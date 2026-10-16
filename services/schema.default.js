@@ -1,0 +1,54 @@
+// Schéma déclaratif exporté en module ES pour compatibilité directe avec les extensions
+export const DEFAULT_SCHEMA = {
+  version: '1.0.0',
+  description: 'Configuration déclarative du schéma Notion pour Culture Tracker. Modifiable par n\'importe quel agent IA.',
+  mediaTypes: {
+    movie: {
+      name: 'Films',
+      databaseKey: 'moviesDbId',
+      template: 'movie-default',
+      usePageTemplate: true,
+      properties: {
+        title: { notionName: 'Title', type: 'title' },
+        releaseDate: { notionName: 'Release Date', type: 'date' },
+        rating: { notionName: 'Rating', type: 'number' },
+        status: { notionName: 'Watch Status', type: 'select', defaultValue: '🔵 To Watch' },
+        genres: { notionName: 'Genres', type: 'relation', lookupTable: 'genres' },
+        platform: { notionName: 'Platforms', type: 'relation', lookupTable: 'platforms' },
+        year: { notionName: 'Year Watched', type: 'relation', lookupTable: 'years' }
+      }
+    },
+    tv: {
+      name: 'Séries TV',
+      databaseKey: 'tvShowsDbId',
+      template: 'tv-default',
+      usePageTemplate: true,
+      properties: {
+        title: { notionName: 'Title', type: 'title' },
+        releaseDate: { notionName: 'Release Date', type: 'date' },
+        totalEp: { notionName: 'Total Episodes', type: 'number' },
+        rating: { notionName: 'Rating', type: 'number' },
+        status: { notionName: 'Watch Status', type: 'select', defaultValue: '🔵 To Watch' },
+        genres: { notionName: 'Genres', type: 'relation', lookupTable: 'genres' },
+        platform: { notionName: 'Platforms', type: 'relation', lookupTable: 'platforms' },
+        year: { notionName: 'Year Watched', type: 'relation', lookupTable: 'years' }
+      }
+    },
+    game: {
+      name: 'Jeux Vidéo',
+      databaseKey: 'gamesDbId',
+      template: 'game-default',
+      usePageTemplate: true,
+      properties: {
+        title: { notionName: 'Title', type: 'title' },
+        platform: { notionName: 'Game Platform', type: 'relation', lookupTable: 'gamePlatforms' },
+        genres: { notionName: 'Genres', type: 'relation', lookupTable: 'gameGenres' },
+        status: { notionName: 'Game Status', type: 'select', defaultValue: '🔵 Backlog' },
+        rating: { notionName: 'Overall Rating', type: 'number' },
+        playerSupport: { notionName: 'Player Support', type: 'select' },
+        copy: { notionName: 'Copy', type: 'select', defaultValue: 'Digital' },
+        year: { notionName: 'Year Played', type: 'relation', lookupTable: 'years' }
+      }
+    }
+  }
+};

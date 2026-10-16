@@ -383,3 +383,10 @@ export async function createMediaPage(itemData, config) {
     url: createdPage.url || `https://notion.so/${createdPage.id.replace(/-/g, '')}`
   };
 }
+
+// Ré-exports des modules d'architecture universelle pour compatibilité globale
+export { buildNotionProperties, resolveLookupId, normalizeKey } from './notion-adapter.js';
+export { renderTemplateBlocks, NotionBlocks, BUILTIN_TEMPLATES } from './template-engine.js';
+export { inspectDatabase, generateSchemaRecommendation, formatDatabaseId } from './schema-discovery.js';
+export { DEFAULT_SCHEMA } from './schema.default.js';
+

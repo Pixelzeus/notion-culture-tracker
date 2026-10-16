@@ -40,7 +40,8 @@
         "popup/popup.js",
         "services/*",
         "icons/*",
-        "content/*"
+        "content/*",
+        "config/*"
       ],
       "matches": [
         "https://www.notion.so/*",
