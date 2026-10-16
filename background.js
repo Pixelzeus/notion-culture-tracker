@@ -16,7 +16,9 @@ if (typeof browser !== 'undefined' && browser.webRequest && browser.webRequest.o
       urls: [
         'https://api.thegamesdb.net/*',
         'https://cdn.thegamesdb.net/*',
-        'https://store.steampowered.com/*'
+        'https://store.steampowered.com/*',
+        'https://api.themoviedb.org/*',
+        'https://api.notion.com/*'
       ]
     },
     ['blocking', 'responseHeaders']

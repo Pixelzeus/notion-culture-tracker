@@ -9,6 +9,7 @@ import {
   DEFAULT_CONFIG
 } from './config.js';
 import { buildTvTemplateBlocks, buildMovieTemplateBlocks, buildGameTemplateBlocks } from './templates.js';
+import { safeFetch } from './fetch-proxy.js';
 
 const NOTION_API_URL = 'https://api.notion.com/v1';
 const NOTION_VERSION = '2022-06-28';
@@ -25,7 +26,7 @@ export async function testNotionConnection(config) {
   const apiKey = config.notionApiKey || DEFAULT_CONFIG.notionApiKey;
   if (!apiKey) throw new Error('Clé API Notion manquante.');
   const dbId = config.moviesDbId || DEFAULT_CONFIG.moviesDbId;
-  const res = await fetch(`${NOTION_API_URL}/databases/${dbId}`, {
+  const res = await safeFetch(`${NOTION_API_URL}/databases/${dbId}`, {
     method: 'GET',
     headers: getHeaders(apiKey)
   });
@@ -36,8 +37,6 @@ export async function testNotionConnection(config) {
   }
   return true;
 }
-
-import { safeFetch } from './fetch-proxy.js';
 
 export async function testGamesDbConnection(config) {
   const apiKey = config.gamesDbApiKey || DEFAULT_CONFIG.gamesDbApiKey;
@@ -357,7 +356,7 @@ export async function createMediaPage(itemData, config) {
     };
   }
 
-  let res = await fetch(`${NOTION_API_URL}/pages`, {
+  let res = await safeFetch(`${NOTION_API_URL}/pages`, {
     method: 'POST',
     headers: getHeaders(apiKey),
     body: JSON.stringify(body)
@@ -366,7 +365,7 @@ export async function createMediaPage(itemData, config) {
   // Si l'icône { type: 'icon' } échoue (fallback vers emoji 🎮)
   if (!res.ok && isGame && body.icon?.type === 'icon') {
     body.icon = { type: 'emoji', emoji: '🎮' };
-    res = await fetch(`${NOTION_API_URL}/pages`, {
+    res = await safeFetch(`${NOTION_API_URL}/pages`, {
       method: 'POST',
       headers: getHeaders(apiKey),
       body: JSON.stringify(body)

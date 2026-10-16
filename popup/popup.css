@@ -113,6 +113,27 @@ body {
   background-color: var(--bg-hover);
 }
 
+.action-pill-btn {
+  background: rgba(35, 131, 226, 0.15);
+  border: 1px solid rgba(35, 131, 226, 0.35);
+  color: #58a6ff;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 9px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.action-pill-btn:hover {
+  background: rgba(35, 131, 226, 0.28);
+  border-color: #2383e2;
+  color: #ffffff;
+}
+
 /* Main Body Views */
 .app-body {
   padding: 12px 14px 18px;
@@ -841,3 +862,33 @@ body {
 .settings-actions .primary-btn {
   flex: 1 1 100%;
 }
+
+/* ==========================================================================
+   MODE INTÉGRÉ NOTION (EMBEDDED IN-PAGE DRAWER)
+   ========================================================================== */
+
+.embedded-only {
+  display: none !important;
+}
+
+body.embedded {
+  width: 100% !important;
+  min-height: 100vh !important;
+  max-height: 100vh !important;
+  height: 100vh !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+body.embedded .embedded-only {
+  display: inline-flex !important;
+}
+
+body.embedded .app-header {
+  padding: 10px 16px;
+}
+
+body.embedded .app-body {
+  padding-bottom: 40px;
+}
+

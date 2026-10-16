@@ -117,6 +117,50 @@ const dom = {
 
 // Initialisation
 document.addEventListener('DOMContentLoaded', async () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const isEmbedded = urlParams.get('mode') === 'embedded' || window.self !== window.top;
+  if (isEmbedded) {
+    document.body.classList.add('embedded');
+    const btnEmbeddedClose = document.getElementById('btnEmbeddedClose');
+    if (btnEmbeddedClose) {
+      btnEmbeddedClose.addEventListener('click', () => {
+        if (window.parent) {
+          window.parent.postMessage({ type: 'CULTURE_TRACKER_CLOSE' }, '*');
+        }
+      });
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (window.parent) {
+          window.parent.postMessage({ type: 'CULTURE_TRACKER_CLOSE' }, '*');
+        }
+      }
+    });
+  }
+
+  if (!isEmbedded && typeof browser !== 'undefined' && browser.tabs && browser.tabs.query) {
+    try {
+      const [activeTab] = await browser.tabs.query({ active: true, currentWindow: true });
+      if (activeTab && activeTab.url && (activeTab.url.includes('notion.so') || activeTab.url.includes('notion.com'))) {
+        const btnOpenInNotion = document.getElementById('btnOpenInNotion');
+        if (btnOpenInNotion) {
+          btnOpenInNotion.style.display = 'inline-flex';
+          btnOpenInNotion.addEventListener('click', async () => {
+            try {
+              await browser.tabs.sendMessage(activeTab.id, { type: 'TOGGLE_NOTION_PANEL' });
+            } catch {
+              // si pas encore injecté
+            }
+            window.close();
+          });
+        }
+      }
+    } catch {
+      // Ignorer
+    }
+  }
+
   state.config = await getConfig();
   setupYearDropdown();
   setupEventListeners();

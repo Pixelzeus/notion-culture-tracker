@@ -1,4 +1,5 @@
 // Client API The Movie Database (TMDb)
+import { safeFetch } from './fetch-proxy.js';
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const IMAGE_BASE_W780 = 'https://image.tmdb.org/t/p/w780';
@@ -19,7 +20,7 @@ export async function searchMedia(query, type = 'all', config) {
   url.searchParams.set('language', config.language || 'fr-FR');
   url.searchParams.set('include_adult', 'false');
 
-  const res = await fetch(url.toString());
+  const res = await safeFetch(url.toString());
   if (!res.ok) {
     const errorText = await res.text();
     throw new Error(`Erreur TMDb (${res.status}): ${errorText}`);
@@ -66,7 +67,7 @@ export async function getMediaDetails(id, mediaType, config) {
   url.searchParams.set('language', config.language || 'fr-FR');
   url.searchParams.set('append_to_response', 'credits,watch/providers');
 
-  const res = await fetch(url.toString());
+  const res = await safeFetch(url.toString());
   if (!res.ok) {
     const errText = await res.text();
     throw new Error(`Erreur détails TMDb (${res.status}): ${errText}`);

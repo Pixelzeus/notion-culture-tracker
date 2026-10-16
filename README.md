@@ -1,6 +1,18 @@
 # 🍿 Culture Tracker — Extension Firefox (TMDb, TheGamesDB & Notion)
 
-Extension Firefox conçue sur mesure pour votre tableau de bord **Tracking Culture** dans Notion. Elle permet de rechercher n'importe quel film ou série (via **TMDb**) ainsi que des jeux vidéo multiplateformes (via **TheGamesDB**) et de les ajouter en 1 clic dans vos bases de données Notion avec leurs métadonnées, jaquettes officielles et **leurs templates de page Notion pré-remplis**.
+Extension Firefox conçue sur mesure pour votre tableau de bord **Tracking Culture** dans Notion. Elle permet de rechercher n'importe quel film ou série (via **TMDb**) ainsi que des jeux vidéo multiplateformes (via **TheGamesDB** et **Steam**) et de les ajouter en 1 clic dans vos bases de données Notion avec leurs métadonnées, jaquettes officielles et **leurs templates de page Notion pré-remplis**.
+
+---
+
+## ⚡ Nouveau : Intégration Directe dans l'UI de Notion
+
+L'extension s'intègre désormais directement à l'intérieur de l'application web Notion (`https://www.notion.so/*`) :
+* **Bouton flottant discret** : une pilule sombre `🍿 Culture Tracker` s'affiche en bas à droite de votre écran sur Notion.
+* **Panneau latéral rétractable (Sidebar Drawer)** : un clic fait glisser un tiroir fluide de 460px depuis le bord droit, non-bloquant pour continuer à faire défiler vos bases Notion tout en important vos œuvres.
+* **Raccourcis rapides** :
+  * `Alt + C` : ouvrir / fermer le panneau n'importe où dans Notion.
+  * `Échap` : refermer instantanément le tiroir.
+* **Bouton rapide depuis la barre d'outils** : si vous ouvrez le popup classique sur un onglet Notion, un bouton `📍 Intégrer à la page` vous permet de basculer directement sur le panneau in-page.
 
 ---
 
