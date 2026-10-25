@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Culture Tracker - TMDb, TheGamesDB & Notion",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Ajoutez rapidement vos films, séries et jeux vidéo dans votre espace Notion Tracking Culture avec The Movie Database (TMDb) et TheGamesDB.",
   "icons": {
     "16": "icons/icon-16.png",
