@@ -22,18 +22,31 @@
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
+
+  /* Ergonomie tactile & Responsive */
+  --touch-target-min: 44px;
+  --touch-target-compact: 40px;
+  --input-height: 44px;
+  --btn-height: 44px;
 }
 
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button, input, select, textarea, a, .tab, .genre-tag, .result-card {
+  touch-action: manipulation;
 }
 
 body {
-  width: 440px;
-  min-height: 540px;
-  max-height: 590px;
+  width: 100%;
+  max-width: 440px;
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0 auto;
   overflow-y: auto;
   overflow-x: hidden;
   font-family: var(--font-sans);
@@ -41,6 +54,15 @@ body {
   color: var(--text-primary);
   font-size: 13px;
   line-height: 1.4;
+}
+
+/* En popup classique sur navigateur desktop */
+@media (min-width: 421px) {
+  body:not(.embedded) {
+    width: 440px;
+    min-height: 540px;
+    max-height: 590px;
+  }
 }
 
 /* Custom Scrollbar */
@@ -100,9 +122,11 @@ body {
   border: none;
   color: var(--text-secondary);
   cursor: pointer;
-  padding: 6px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 10px;
   border-radius: var(--radius-sm);
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   transition: all 0.15s ease;
@@ -117,9 +141,10 @@ body {
   background: rgba(35, 131, 226, 0.15);
   border: 1px solid rgba(35, 131, 226, 0.35);
   color: #58a6ff;
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 500;
-  padding: 4px 9px;
+  min-height: 44px;
+  padding: 6px 12px;
   border-radius: var(--radius-sm);
   cursor: pointer;
   display: inline-flex;
@@ -167,12 +192,13 @@ body {
 
 .search-box input {
   width: 100%;
-  padding: 9px 32px 9px 34px;
+  min-height: 44px;
+  padding: 10px 44px 10px 38px;
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: 13.5px;
   outline: none;
   transition: border-color 0.15s ease, background-color 0.15s ease;
 }
@@ -184,13 +210,22 @@ body {
 
 .clear-btn {
   position: absolute;
-  right: 8px;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: none;
   color: var(--text-secondary);
-  font-size: 16px;
+  font-size: 18px;
   cursor: pointer;
-  padding: 2px 6px;
+  padding: 0;
   border-radius: 50%;
 }
 
@@ -207,16 +242,21 @@ body {
 
 .tab {
   flex: 1;
-  padding: 6px 8px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 6px;
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
   text-align: center;
+  white-space: nowrap;
 }
 
 .tab:hover {
@@ -413,12 +453,13 @@ body {
   background: transparent;
   border: none;
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 6px;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px 12px;
   border-radius: var(--radius-sm);
   transition: all 0.15s ease;
 }
@@ -495,7 +536,7 @@ body {
   background-color: rgba(35, 131, 226, 0.08);
   border: 1px solid rgba(35, 131, 226, 0.3);
   border-radius: var(--radius-sm);
-  padding: 8px 10px;
+  padding: 10px 12px;
   margin-bottom: 4px;
 }
 
@@ -507,6 +548,15 @@ body {
   font-weight: 600;
   font-size: 12px;
   color: #6bb3f5;
+  min-height: 44px;
+}
+
+.template-checkbox-label input[type="checkbox"] {
+  transform: scale(1.2);
+  margin-right: 4px;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
 }
 
 .template-subtext {
@@ -548,12 +598,13 @@ body {
 
 .form-input, .form-select, .form-textarea {
   width: 100%;
-  padding: 7px 10px;
+  min-height: 44px;
+  padding: 10px 12px;
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
-  font-size: 12.5px;
+  font-size: 13px;
   outline: none;
   font-family: inherit;
   transition: border-color 0.15s ease;
@@ -564,6 +615,7 @@ body {
 }
 
 .form-textarea {
+  min-height: 80px;
   resize: vertical;
   line-height: 1.4;
 }
@@ -586,9 +638,12 @@ body {
 }
 
 .radio-chip span {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  padding: 6px 8px;
+  min-height: 44px;
+  padding: 8px 12px;
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
@@ -608,21 +663,28 @@ body {
 .stars-picker {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
-  padding: 4px 8px;
+  padding: 2px 6px;
+  min-height: 44px;
 }
 
 .star {
   background: transparent;
   border: none;
-  font-size: 17px;
+  font-size: 22px;
   color: #4a4a4a;
   cursor: pointer;
   transition: transform 0.1s ease, color 0.15s ease;
   line-height: 1;
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }
 
 .star.active, .star.hover {
@@ -635,7 +697,13 @@ body {
   color: var(--text-muted);
   cursor: pointer;
   margin-left: 6px;
-  font-size: 14px;
+  font-size: 20px;
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }
 
 .clear-star:hover {
@@ -652,8 +720,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  padding: 7px 10px;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px 12px;
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
@@ -696,19 +765,22 @@ body {
 .tags-container {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
-  max-height: 80px;
+  gap: 6px;
+  max-height: 120px;
   overflow-y: auto;
-  padding: 2px 0;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 0;
 }
 
 .genre-tag {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
-  padding: 3px 8px;
-  border-radius: 12px;
-  font-size: 11px;
+  min-height: 44px;
+  padding: 6px 12px;
+  border-radius: 17px;
+  font-size: 11.5px;
   cursor: pointer;
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
@@ -730,12 +802,13 @@ body {
   justify-content: center;
   gap: 8px;
   width: 100%;
-  padding: 10px 14px;
+  min-height: 44px;
+  padding: 12px 16px;
   background-color: var(--accent-blue);
   border: none;
   border-radius: var(--radius-sm);
   color: #ffffff;
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.15s ease, transform 0.1s ease;
@@ -758,12 +831,13 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 7px 12px;
+  min-height: 44px;
+  padding: 10px 14px;
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -810,11 +884,12 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 8px 12px;
+  min-height: 44px;
+  padding: 10px 14px;
   background-color: #ffffff;
   color: #000000;
   text-decoration: none;
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 600;
   border-radius: var(--radius-sm);
   transition: opacity 0.15s ease;
@@ -884,6 +959,66 @@ body.embedded .app-header {
 }
 
 body.embedded .app-body {
-  padding-bottom: 40px;
+  padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px));
 }
+
+/* ==========================================================================
+   RESPONSIVE MEDIA QUERIES (MOBILE & TABLET ADAPTATION)
+   ========================================================================== */
+
+/* Mobile viewports (<= 420px): fluid full viewport width, tight padding, iOS zoom prevention */
+@media (max-width: 420px) {
+  body {
+    width: 100vw;
+    max-width: 100vw;
+  }
+
+  .app-header {
+    padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 8px;
+  }
+
+  .brand-text .subtitle {
+    display: none; /* Prevents header overflow on narrow screens */
+  }
+
+  .app-body {
+    padding: 10px 12px calc(24px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .form-input, .form-select, .form-textarea, .search-box input {
+    font-size: 16px; /* Prevents auto-zoom on iOS Safari */
+  }
+}
+
+/* Narrow screens (<= 380px): stack multi-column rows vertically */
+@media (max-width: 380px) {
+  .form-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .form-row > * {
+    width: 100% !important;
+    flex: none !important;
+  }
+
+  .form-row .flex-auto-btn .form-label,
+  .form-row .favourite-wrapper .form-label {
+    display: none;
+  }
+
+  .form-row .flex-auto-btn .secondary-btn {
+    width: 100%;
+  }
+
+  .settings-actions {
+    flex-direction: column;
+  }
+
+  .settings-actions button {
+    width: 100%;
+  }
+}
+
 

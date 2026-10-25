@@ -1,34 +1,41 @@
-// Background service worker / script pour Firefox MV3
-// Gère l'injection des en-têtes CORS et le proxy fetch sécurisé pour TheGamesDB et Steam
+// Background service worker / script dual-mode (Chrome MV3, Firefox MV3, Safari MV3)
+// Gère l'injection des en-têtes CORS (Firefox) et le proxy fetch universel pour contourner les restrictions CORS
 
-// 1. Injection dynamique des en-têtes Access-Control-Allow-Origin
-if (typeof browser !== 'undefined' && browser.webRequest && browser.webRequest.onHeadersReceived) {
-  browser.webRequest.onHeadersReceived.addListener(
-    (details) => {
-      const responseHeaders = details.responseHeaders || [];
-      const hasAcao = responseHeaders.some(h => h.name.toLowerCase() === 'access-control-allow-origin');
-      if (!hasAcao) {
-        responseHeaders.push({ name: 'Access-Control-Allow-Origin', value: '*' });
-      }
-      return { responseHeaders };
-    },
-    {
-      urls: [
-        'https://api.thegamesdb.net/*',
-        'https://cdn.thegamesdb.net/*',
-        'https://store.steampowered.com/*',
-        'https://api.themoviedb.org/*',
-        'https://api.notion.com/*'
-      ]
-    },
-    ['blocking', 'responseHeaders']
-  );
+const api = typeof browser !== 'undefined' ? browser : (typeof chrome !== 'undefined' ? chrome : null);
+
+// 1. Injection dynamique des en-têtes Access-Control-Allow-Origin (supporté dans Firefox avec webRequestBlocking)
+if (api?.webRequest?.onHeadersReceived) {
+  try {
+    api.webRequest.onHeadersReceived.addListener(
+      (details) => {
+        const responseHeaders = details?.responseHeaders || [];
+        const hasAcao = responseHeaders.some(h => (h?.name || '').toLowerCase() === 'access-control-allow-origin');
+        if (!hasAcao && details?.responseHeaders) {
+          details.responseHeaders.push({ name: 'Access-Control-Allow-Origin', value: '*' });
+        }
+        return { responseHeaders: details?.responseHeaders || [] };
+      },
+      {
+        urls: [
+          'https://api.thegamesdb.net/*',
+          'https://cdn.thegamesdb.net/*',
+          'https://store.steampowered.com/*',
+          'https://api.themoviedb.org/*',
+          'https://api.notion.com/*'
+        ]
+      },
+      ['blocking', 'responseHeaders']
+    );
+  } catch (err) {
+    // webRequestBlocking n'est pas disponible dans Chrome MV3 ni Safari MV3
+    // Le relai via PROXY_FETCH prend le relai de manière transparente
+  }
 }
 
-// 2. Proxy de secours pour les requêtes fetch cross-origin
-if (typeof browser !== 'undefined' && browser.runtime && browser.runtime.onMessage) {
-  browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.type === 'PROXY_FETCH') {
+// 2. Proxy universel pour les requêtes fetch cross-origin
+if (api?.runtime?.onMessage) {
+  api.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message?.type === 'PROXY_FETCH') {
       fetch(message.url, message.options || {})
         .then(async (res) => {
           const text = await res.text();

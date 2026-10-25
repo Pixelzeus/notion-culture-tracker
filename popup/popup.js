@@ -22,6 +22,7 @@ import {
   matchPlatformToNotion,
   matchGamePlatformToNotion
 } from '../services/notion.js';
+import { browserAPI } from '../services/browser-adapter.js';
 
 // État de l'application
 const state = {
@@ -94,7 +95,7 @@ const dom = {
   textNotes: document.getElementById('textNotes'),
   btnSubmitImport: document.getElementById('btnSubmitImport'),
   successCard: document.getElementById('successCard'),
-  btnOpenInNotion: document.getElementById('btnOpenInNotion'),
+  linkOpenInNotion: document.getElementById('linkOpenInNotion'),
 
   // Paramètres
   settingsForm: document.getElementById('settingsForm'),
@@ -138,16 +139,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  if (!isEmbedded && typeof browser !== 'undefined' && browser.tabs && browser.tabs.query) {
+  if (!isEmbedded && browserAPI?.tabs?.query) {
     try {
-      const [activeTab] = await browser.tabs.query({ active: true, currentWindow: true });
+      const [activeTab] = await browserAPI.tabs.query({ active: true, currentWindow: true });
       if (activeTab && activeTab.url && (activeTab.url.includes('notion.so') || activeTab.url.includes('notion.com'))) {
         const btnOpenInNotion = document.getElementById('btnOpenInNotion');
         if (btnOpenInNotion) {
           btnOpenInNotion.style.display = 'inline-flex';
           btnOpenInNotion.addEventListener('click', async () => {
             try {
-              await browser.tabs.sendMessage(activeTab.id, { type: 'TOGGLE_NOTION_PANEL' });
+              await browserAPI.tabs.sendMessage(activeTab.id, { type: 'TOGGLE_NOTION_PANEL' });
             } catch {
               // si pas encore injecté
             }
@@ -712,7 +713,7 @@ async function handleImportSubmit(e) {
 
     dom.importForm.style.display = 'none';
     dom.successCard.style.display = 'flex';
-    dom.btnOpenInNotion.href = result.url;
+    dom.linkOpenInNotion.href = result.url;
   } catch (err) {
     showErrorAlert(`Erreur lors de l'ajout dans Notion: ${err.message}`);
     dom.btnSubmitImport.disabled = false;
@@ -822,11 +823,11 @@ async function handleTestAllApis() {
   dom.btnTestAllApis.textContent = '🔍 Tester toutes les APIs';
 }
 
-// Vérification proactive des autorisations d'hôtes Firefox
+// Vérification proactive des autorisations d'hôtes cross-navigateur
 async function checkAndPromptHostPermissions() {
-  if (typeof browser !== 'undefined' && browser.permissions && browser.permissions.contains) {
+  if (browserAPI?.permissions?.contains) {
     try {
-      const hasPerms = await browser.permissions.contains({
+      const hasPerms = await browserAPI.permissions.contains({
         origins: [
           'https://api.thegamesdb.net/*',
           'https://api.themoviedb.org/*',
@@ -844,9 +845,9 @@ async function checkAndPromptHostPermissions() {
 
 // Demande interactive des autorisations d'accès aux APIs
 async function requestAllHostPermissions() {
-  if (typeof browser !== 'undefined' && browser.permissions && browser.permissions.request) {
+  if (browserAPI?.permissions?.request) {
     try {
-      const granted = await browser.permissions.request({
+      const granted = await browserAPI.permissions.request({
         origins: [
           'https://api.themoviedb.org/*',
           'https://api.notion.com/*',

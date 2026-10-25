@@ -32,3 +32,10 @@ desktop.ini
 .idea/
 *.sublime-project
 *.sublime-workspace
+
+# Teamwork internal logs
+.agents/
+
+PROJECT.md
+TEST_INFRA.md
+TEST_READY.md

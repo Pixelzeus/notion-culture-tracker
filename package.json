@@ -1,0 +1,22 @@
+{
+  "name": "notion-culture-tracker",
+  "version": "1.5.0",
+  "description": "Ajoutez rapidement vos films, séries et jeux vidéo dans votre espace Notion avec TMDb, TheGamesDB et Steam.",
+  "type": "module",
+  "scripts": {
+    "test": "node test/adapter.test.js && node test/browser-adapter.test.js",
+    "test:e2e": "node test/e2e/e2e-runner.js",
+    "test:syntax": "node -c background.js content/notion-inject.js popup/popup.js services/*.js scripts/*.js",
+    "build": "node scripts/build.js",
+    "build:chrome": "node scripts/build.js --browser=chrome",
+    "build:firefox": "node scripts/build.js --browser=firefox",
+    "build:safari": "node scripts/build.js --browser=safari",
+    "release:publish": "node scripts/publish-release.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Pixelzeus/notion-culture-tracker.git"
+  },
+  "author": "Pixelzeus",
+  "license": "MIT"
+}

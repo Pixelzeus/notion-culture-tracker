@@ -1,4 +1,5 @@
 // Module de requête réseau sécurisé avec fallback automatique sur le background script
+import { browserAPI } from './browser-adapter.js';
 
 export async function safeFetch(url, options = {}) {
   // 1. Tentative de fetch direct
@@ -6,10 +7,10 @@ export async function safeFetch(url, options = {}) {
     const res = await fetch(url, options);
     return res;
   } catch (err) {
-    // 2. Si le fetch échoue (CORS, restriction Firefox dans le popup...), relais via le background
-    if (typeof browser !== 'undefined' && browser.runtime && browser.runtime.sendMessage) {
+    // 2. Si le fetch échoue (CORS, restriction dans le popup...), relais via le background
+    if (browserAPI?.runtime?.sendMessage) {
       try {
-        const resp = await browser.runtime.sendMessage({
+        const resp = await browserAPI.runtime.sendMessage({
           type: 'PROXY_FETCH',
           url,
           options
