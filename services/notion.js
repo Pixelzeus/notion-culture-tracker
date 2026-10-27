@@ -9,7 +9,12 @@ import {
   DEFAULT_CONFIG
 } from './config.js';
 import { buildTvTemplateBlocks, buildMovieTemplateBlocks, buildGameTemplateBlocks } from './templates.js';
+import { renderTemplateBlocks } from './template-engine.js';
+import { DEFAULT_SCHEMA } from './schema.default.js';
 import { safeFetch } from './fetch-proxy.js';
+import { browserAPI } from './browser-adapter.js';
+import { buildNotionProperties } from './notion-adapter.js';
+import { formatDatabaseId } from './schema-discovery.js';
 
 const NOTION_API_URL = 'https://api.notion.com/v1';
 const NOTION_VERSION = '2022-06-28';
@@ -151,8 +156,94 @@ export async function createMediaPage(itemData, config) {
 
   const isGame = itemData.isGame === true;
   const isMovie = itemData.isMovie === true;
+  const mediaType = isGame ? 'game' : (isMovie ? 'movie' : 'tv');
 
-  // 1. Image de couverture (Cover)
+  // 1. Charger le schéma actif (storage local ou DEFAULT_SCHEMA)
+  let activeSchema = config.schema || config.cultureTrackerSchema || null;
+  if (!activeSchema && browserAPI?.storage?.local) {
+    try {
+      const storage = await browserAPI.storage.local.get('cultureTrackerSchema');
+      if (storage && storage.cultureTrackerSchema) {
+        activeSchema = storage.cultureTrackerSchema;
+      }
+    } catch (e) {
+      console.warn('Erreur lecture storage local pour le schéma Notion:', e);
+    }
+  }
+  if (!activeSchema) {
+    activeSchema = DEFAULT_SCHEMA;
+  }
+
+  const mediaSchema = activeSchema.mediaTypes?.[mediaType] || DEFAULT_SCHEMA.mediaTypes[mediaType];
+
+  // 2. Préparation des tables de correspondance pour relations
+  const lookupTables = {
+    genres: NOTION_KNOWN_GENRES,
+    gameGenres: NOTION_KNOWN_GAME_GENRES,
+    platforms: Object.fromEntries(NOTION_KNOWN_PLATFORMS.map(p => [p.name, p.id])),
+    gamePlatforms: Object.fromEntries(NOTION_KNOWN_GAME_PLATFORMS.map(p => [p.name, p.id])),
+    years: NOTION_KNOWN_YEARS
+  };
+
+  // 3. Normalisation des données média pour l'adaptateur
+  let parsedRating = itemData.rating !== undefined ? itemData.rating : itemData.gameRating;
+  if (typeof parsedRating === 'string') {
+    if (parsedRating.startsWith('⭐')) {
+      parsedRating = (parsedRating.match(/⭐/g) || []).length;
+    } else if (!isNaN(parseFloat(parsedRating))) {
+      parsedRating = parseFloat(parsedRating);
+    }
+  }
+
+  const normalizedItemData = {
+    ...itemData,
+    title: itemData.title || 'Sans titre',
+    releaseDate: itemData.releaseDate || itemData.dateViewed,
+    dateViewed: itemData.dateViewed || itemData.releaseDate,
+    rating: parsedRating,
+    status: itemData.status || itemData.gameStatus,
+    genres: (itemData.genreIds && itemData.genreIds.length > 0) ? itemData.genreIds : itemData.genres,
+    platform: itemData.platformId || itemData.platform || itemData.gamePlatformName,
+    year: itemData.yearWatchId || itemData.year,
+    casts: itemData.casts,
+    playerSupport: itemData.playerSupport,
+    copy: itemData.copy,
+    totalEp: itemData.totalEp,
+    currentEp: itemData.currentEp,
+    url: itemData.storeUrl || itemData.url,
+    favourite: itemData.isFavourite ? '♥ Favourite ♥' : undefined,
+    isFavourite: itemData.isFavourite,
+    notes: (itemData.notes && itemData.notes.trim() && itemData.notes.trim() !== (itemData.summary || '').trim())
+      ? itemData.notes.slice(0, 1900)
+      : undefined
+  };
+
+  // 4. Construction dynamique des propriétés Notion via l'adaptateur
+  const properties = buildNotionProperties(normalizedItemData, mediaSchema, lookupTables);
+
+  // 5. Routage de la base cible & injection du discriminant en mode unifié
+  let targetDatabaseId;
+  const isUnifiedMode = activeSchema.databaseMode === 'unified' && Boolean(activeSchema.unifiedDatabase?.databaseId);
+
+  if (isUnifiedMode) {
+    targetDatabaseId = formatDatabaseId(activeSchema.unifiedDatabase.databaseId);
+    const typeProp = activeSchema.unifiedDatabase.typeProperty;
+    const typePropName = (typeof typeProp === 'object' ? typeProp?.notionName : typeProp) || 'Type';
+    const typeValue = activeSchema.unifiedDatabase.typeValues?.[mediaType] || (isGame ? 'Jeu Vidéo' : (isMovie ? 'Film' : 'Série TV'));
+    properties[typePropName] = {
+      select: { name: String(typeValue).slice(0, 100) }
+    };
+  } else {
+    if (isGame) {
+      targetDatabaseId = formatDatabaseId(mediaSchema.databaseId || config.gamesDbId || DEFAULT_CONFIG.gamesDbId);
+    } else if (isMovie) {
+      targetDatabaseId = formatDatabaseId(mediaSchema.databaseId || config.moviesDbId || DEFAULT_CONFIG.moviesDbId);
+    } else {
+      targetDatabaseId = formatDatabaseId(mediaSchema.databaseId || config.tvShowsDbId || DEFAULT_CONFIG.tvShowsDbId);
+    }
+  }
+
+  // 6. Image de couverture (Cover)
   let coverUrl = null;
   if (config.useBackdropAsCover && itemData.backdropUrl) {
     coverUrl = itemData.backdropUrl;
@@ -162,192 +253,56 @@ export async function createMediaPage(itemData, config) {
     coverUrl = itemData.backdropUrl;
   }
 
-  // Validation URL HTTP/HTTPS
   if (coverUrl && !coverUrl.startsWith('http://') && !coverUrl.startsWith('https://')) {
     coverUrl = null;
   }
 
-  let body = null;
-
-  // CAS A : JEU VIDÉO (All Games Database avec template "Game Title Here")
+  // 7. Icône de page Notion
+  let iconPayload;
   if (isGame) {
-    const databaseId = config.gamesDbId || DEFAULT_CONFIG.gamesDbId;
-    const properties = {
-      'Name': {
-        title: [{ text: { content: itemData.title || 'Sans titre' } }]
-      }
-    };
-
-    if (itemData.storeUrl) {
-      properties['URL'] = { url: itemData.storeUrl };
-    }
-
-    // Validation date
-    if (itemData.releaseDate && typeof itemData.releaseDate === 'string' && /^\d{4}(-\d{2}(-\d{2})?)?$/.test(itemData.releaseDate.trim())) {
-      properties['Release Date'] = { date: { start: itemData.releaseDate.trim() } };
-    }
-
-    if (itemData.gameStatus) {
-      properties['Game Status'] = { select: { name: itemData.gameStatus } };
-    }
-    if (itemData.gameRating) {
-      properties['Overall Rating'] = { select: { name: itemData.gameRating } };
-    }
-    if (itemData.copy) {
-      properties['Copy'] = { select: { name: itemData.copy } };
-    }
-    if (itemData.playerSupport && itemData.playerSupport.length > 0) {
-      properties['Player Support'] = {
-        multi_select: itemData.playerSupport.map(name => ({ name }))
-      };
-    }
-    if (itemData.platformId) {
-      properties['Game Platform'] = {
-        relation: [{ id: itemData.platformId }]
-      };
-    }
-    if (itemData.genreIds && itemData.genreIds.length > 0) {
-      properties['Genres'] = {
-        relation: itemData.genreIds.map(id => ({ id }))
-      };
-    }
-    if (itemData.yearWatchId) {
-      properties['Year Played'] = {
-        relation: [{ id: itemData.yearWatchId }]
-      };
-    }
-    if (itemData.isFavourite) {
-      properties['Favourite?'] = { select: { name: '♥ Favourite ♥' } };
-    }
-    // IMPORTANT: Le résumé du jeu ne doit PAS être mis dans la propriété 'Notes' de la base Notion.
-    // 'Notes' est réservé uniquement aux notes personnelles de l'utilisateur (si renseignées).
-    if (itemData.notes && itemData.notes.trim() && itemData.notes.trim() !== (itemData.summary || '').trim()) {
-      properties['Notes'] = {
-        rich_text: [{ text: { content: itemData.notes.slice(0, 1900) } }]
-      };
-    }
-
-    // Blocs de page du template "Game Title Here"
-    const validPosterUrl = (itemData.posterUrl && itemData.posterUrl.startsWith('http'))
-      ? itemData.posterUrl
-      : ((itemData.backdropUrl && itemData.backdropUrl.startsWith('http')) ? itemData.backdropUrl : null);
-
-    // Le résumé du jeu est inséré UNIQUEMENT dans le corps de la page dans la section droite ("Game Summary")
-    const pageGameSummary = itemData.summary || itemData.overview || '';
-    const children = config.usePageTemplate
-      ? buildGameTemplateBlocks(validPosterUrl, pageGameSummary)
-      : [];
-
-    body = {
-      parent: { database_id: databaseId },
-      icon: { type: 'icon', icon: { name: 'video-game', color: 'blue' } },
-      properties,
-      children
-    };
+    iconPayload = { type: 'icon', icon: { name: 'video-game', color: 'blue' } };
+  } else if (isMovie) {
+    iconPayload = { type: 'emoji', emoji: '🎥' };
+  } else {
+    iconPayload = { type: 'emoji', emoji: itemData.type === '🎨 Anime' ? '🎨' : '📺' };
   }
-  // CAS B : FILMS OU SÉRIES TV (All Movies / All TV Shows)
-  else {
-    const databaseId = isMovie
-      ? (config.moviesDbId || DEFAULT_CONFIG.moviesDbId)
-      : (config.tvShowsDbId || DEFAULT_CONFIG.tvShowsDbId);
 
-    let iconEmoji = '🎥';
-    if (!isMovie) {
-      iconEmoji = itemData.type === '🎨 Anime' ? '🎨' : '📺';
-    }
+  // 8. Génération des blocs de corps de page (Template)
+  const isTemplateEnabled = config.usePageTemplate !== false && mediaSchema.usePageTemplate !== false;
+  const templateDef = mediaSchema.templateBlocks || mediaSchema.template || (isGame ? 'game-default' : (isMovie ? 'movie-default' : 'tv-default'));
+  const validPosterUrl = (itemData.posterUrl && itemData.posterUrl.startsWith('http'))
+    ? itemData.posterUrl
+    : ((itemData.backdropUrl && itemData.backdropUrl.startsWith('http')) ? itemData.backdropUrl : null);
+  const pageSummary = itemData.summary || itemData.overview || itemData.notes || '';
 
-    const properties = {
-      'Name': {
-        title: [{ text: { content: itemData.title || 'Sans titre' } }]
-      },
-      'Type': {
-        select: { name: isMovie ? '🎥 Movie' : (itemData.type || '📺 TV show') }
-      },
-      'Watch Status': {
-        select: { name: itemData.status || '🔵 To Watch' }
-      }
-    };
+  const vars = {
+    title: itemData.title || '',
+    overview: pageSummary,
+    summary: pageSummary,
+    releaseDate: itemData.releaseDate || '',
+    year: itemData.releasedYear || '',
+    rating: itemData.rating || itemData.gameRating || '',
+    genres: Array.isArray(itemData.genres) ? itemData.genres.join(', ') : (itemData.genres || ''),
+    cast: Array.isArray(itemData.casts) ? itemData.casts.join(', ') : (itemData.casts || ''),
+    posterUrl: validPosterUrl,
+    backdropUrl: itemData.backdropUrl || '',
+    platform: itemData.platform || '',
+    notes: itemData.notes || '',
+    storeUrl: itemData.storeUrl || '',
+    totalEp: itemData.totalEp !== undefined && itemData.totalEp !== null ? String(itemData.totalEp) : '',
+    currentEp: itemData.currentEp !== undefined && itemData.currentEp !== null ? String(itemData.currentEp) : ''
+  };
 
-    if (itemData.releasedYear && !isNaN(itemData.releasedYear)) {
-      properties['Released Year'] = { number: Number(itemData.releasedYear) };
-    }
-    if (itemData.releaseDate && typeof itemData.releaseDate === 'string' && /^\d{4}(-\d{2}(-\d{2})?)?$/.test(itemData.releaseDate.trim())) {
-      properties['Release Date'] = { date: { start: itemData.releaseDate.trim() } };
-    }
-    if (itemData.dateViewed && typeof itemData.dateViewed === 'string' && /^\d{4}(-\d{2}(-\d{2})?)?$/.test(itemData.dateViewed.trim())) {
-      properties['Date viewed'] = { date: { start: itemData.dateViewed.trim() } };
-    }
-    if (itemData.rating) {
-      properties['My Rating'] = { select: { name: itemData.rating } };
-    }
-    if (itemData.isFavourite) {
-      properties['Favourite?'] = { select: { name: '♥ Favourite ♥' } };
-    }
+  const children = isTemplateEnabled
+    ? renderTemplateBlocks(templateDef, vars, true, activeSchema.customTemplates)
+    : [];
 
-    if (itemData.casts && itemData.casts.length > 0) {
-      const validCasts = itemData.casts
-        .map(name => ({ name: name.replace(/,/g, '').trim() }))
-        .filter(c => c.name.length > 0)
-        .slice(0, 10);
-      if (validCasts.length > 0) {
-        properties['Casts'] = { multi_select: validCasts };
-      }
-    }
-
-    if (itemData.genreIds && itemData.genreIds.length > 0) {
-      properties['Genre'] = {
-        relation: itemData.genreIds.map(id => ({ id }))
-      };
-    }
-
-    if (itemData.platformId) {
-      properties['Platform'] = {
-        relation: [{ id: itemData.platformId }]
-      };
-    }
-
-    if (itemData.yearWatchId) {
-      properties['Year Watch'] = {
-        relation: [{ id: itemData.yearWatchId }]
-      };
-    }
-
-    if (itemData.notes && itemData.notes.trim()) {
-      properties['Notes'] = {
-        rich_text: [{ text: { content: itemData.notes.slice(0, 1900) } }]
-      };
-    }
-
-    if (!isMovie) {
-      if (itemData.totalEp !== undefined && itemData.totalEp !== null) {
-        properties['Total Ep'] = { number: Number(itemData.totalEp) };
-      }
-      if (itemData.currentEp !== undefined && itemData.currentEp !== null) {
-        properties['Current Ep'] = { number: Number(itemData.currentEp) };
-      }
-    }
-
-    // Blocs de page selon le template Notion (TV Title ou Movie Title)
-    let children = [];
-    if (config.usePageTemplate) {
-      const verticalPoster = (itemData.posterUrl && itemData.posterUrl.startsWith('http'))
-        ? itemData.posterUrl
-        : ((itemData.backdropUrl && itemData.backdropUrl.startsWith('http')) ? itemData.backdropUrl : null);
-
-      if (isMovie) {
-        children = buildMovieTemplateBlocks(verticalPoster, itemData.notes);
-      } else {
-        children = buildTvTemplateBlocks(verticalPoster, itemData.notes);
-      }
-    }
-
-    body = {
-      parent: { database_id: databaseId },
-      icon: { type: 'emoji', emoji: iconEmoji },
-      properties,
-      children
-    };
-  }
+  const body = {
+    parent: { database_id: targetDatabaseId },
+    icon: iconPayload,
+    properties,
+    children
+  };
 
   if (coverUrl) {
     body.cover = {
@@ -387,6 +342,6 @@ export async function createMediaPage(itemData, config) {
 // Ré-exports des modules d'architecture universelle pour compatibilité globale
 export { buildNotionProperties, resolveLookupId, normalizeKey } from './notion-adapter.js';
 export { renderTemplateBlocks, NotionBlocks, BUILTIN_TEMPLATES } from './template-engine.js';
-export { inspectDatabase, generateSchemaRecommendation, formatDatabaseId } from './schema-discovery.js';
+export { inspectDatabase, generateSchemaRecommendation, formatDatabaseId, runDryRunDiagnostic, evaluatePropertyCompatibility } from './schema-discovery.js';
 export { DEFAULT_SCHEMA } from './schema.default.js';
 

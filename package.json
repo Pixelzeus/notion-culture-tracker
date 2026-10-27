@@ -6,7 +6,7 @@
   "scripts": {
     "test": "node test/adapter.test.js && node test/browser-adapter.test.js",
     "test:e2e": "node test/e2e/e2e-runner.js",
-    "test:syntax": "node -c background.js content/notion-inject.js popup/popup.js services/*.js scripts/*.js",
+    "test:syntax": "node -c background.js content/notion-inject.js popup/popup.js options/*.js services/*.js scripts/*.js",
     "build": "node scripts/build.js",
     "build:chrome": "node scripts/build.js --browser=chrome",
     "build:firefox": "node scripts/build.js --browser=firefox",

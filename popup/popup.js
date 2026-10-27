@@ -23,10 +23,13 @@ import {
   matchGamePlatformToNotion
 } from '../services/notion.js';
 import { browserAPI } from '../services/browser-adapter.js';
+import { DEFAULT_SCHEMA } from '../services/schema.default.js';
+import { runDryRunDiagnostic } from '../services/schema-discovery.js';
 
 // État de l'application
 const state = {
   config: null,
+  schema: null,
   activeFilter: 'all',
   currentSearchQuery: '',
   selectedItem: null,
@@ -69,7 +72,9 @@ const dom = {
   groupWatchStatus: document.getElementById('groupWatchStatus'),
   groupGameStatus: document.getElementById('groupGameStatus'),
   rowGameMeta: document.getElementById('rowGameMeta'),
+  groupPlayerSupport: document.getElementById('groupPlayerSupport'),
   inputPlayerSupport: document.getElementById('inputPlayerSupport'),
+  groupGameCopy: document.getElementById('groupGameCopy'),
   selectGameCopy: document.getElementById('selectGameCopy'),
   rowEpisodes: document.getElementById('rowEpisodes'),
   selectStatus: document.getElementById('selectStatus'),
@@ -82,8 +87,11 @@ const dom = {
   btnClearRating: document.getElementById('btnClearRating'),
   checkFavourite: document.getElementById('checkFavourite'),
   rowPlatformDate: document.getElementById('rowPlatformDate'),
+  groupPlatform: document.getElementById('groupPlatform'),
   selectPlatform: document.getElementById('selectPlatform'),
+  groupDateViewed: document.getElementById('groupDateViewed'),
   inputDateViewed: document.getElementById('inputDateViewed'),
+  groupYearWatch: document.getElementById('groupYearWatch'),
   selectYearWatch: document.getElementById('selectYearWatch'),
   groupGenres: document.getElementById('groupGenres'),
   genresTagsList: document.getElementById('genresTagsList'),
@@ -112,6 +120,9 @@ const dom = {
   settingYearlyReviewDb: document.getElementById('settingYearlyReviewDb'),
   settingsFeedback: document.getElementById('settingsFeedback'),
   btnTestAllApis: document.getElementById('btnTestAllApis'),
+  btnRunPopupDiagnostic: document.getElementById('btnRunPopupDiagnostic'),
+  popupDiagnosticFeedback: document.getElementById('popupDiagnosticFeedback'),
+  btnOpenOptionsPage: document.getElementById('btnOpenOptionsPage'),
   bannerPerms: document.getElementById('bannerPerms')
 };
 
@@ -162,6 +173,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   state.config = await getConfig();
+  try {
+    const storageData = await browserAPI.storage.local.get('cultureTrackerSchema');
+    state.schema = storageData?.cultureTrackerSchema || DEFAULT_SCHEMA;
+  } catch (err) {
+    state.schema = DEFAULT_SCHEMA;
+  }
   setupYearDropdown();
   setupEventListeners();
   checkAndPromptHostPermissions();
@@ -215,6 +232,16 @@ function setupEventListeners() {
   dom.btnSettings.addEventListener('click', () => switchView('settings'));
   dom.btnBackToSearch.addEventListener('click', () => switchView('search'));
   dom.btnBackFromSettings.addEventListener('click', () => switchView('search'));
+
+  if (dom.btnOpenOptionsPage) {
+    dom.btnOpenOptionsPage.addEventListener('click', async () => {
+      try {
+        await browserAPI.runtime.openOptionsPage();
+      } catch (err) {
+        console.error('Erreur lors de l\'ouverture de la page d\'options:', err);
+      }
+    });
+  }
 
   // Recherche avec debounce
   let searchTimer = null;
@@ -299,6 +326,9 @@ function setupEventListeners() {
   dom.settingsForm.addEventListener('submit', handleSaveSettings);
   if (dom.btnTestAllApis) {
     dom.btnTestAllApis.addEventListener('click', handleTestAllApis);
+  }
+  if (dom.btnRunPopupDiagnostic) {
+    dom.btnRunPopupDiagnostic.addEventListener('click', handleRunPopupDiagnostic);
   }
   if (dom.bannerPerms) {
     dom.bannerPerms.addEventListener('click', async () => {
@@ -561,6 +591,9 @@ async function openDetailView(basicItem) {
     setRating('');
     dom.checkFavourite.checked = false;
     dom.checkUseTemplate.checked = state.config.usePageTemplate !== false;
+
+    // Adaptation dynamique du formulaire au schéma Notion actif
+    adaptPopupFormToSchema(basicItem.mediaType, state.schema || DEFAULT_SCHEMA);
 
     dom.btnSubmitImport.disabled = false;
     dom.btnSubmitImport.innerHTML = `
@@ -901,3 +934,196 @@ function capitalize(s) {
   if (!s) return '';
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
+
+/**
+ * Adapte dynamiquement la visibilité des champs du formulaire popup au schéma Notion actif
+ * Masque les groupes non mappés et ajuste les largeurs des colonnes flex composées.
+ * @param {string} mediaType 'movie' | 'tv' | 'game'
+ * @param {Object} activeSchema Schéma Notion actif
+ */
+export function adaptPopupFormToSchema(mediaType, activeSchema) {
+  const schema = activeSchema || state.schema || DEFAULT_SCHEMA;
+  const mediaSchema = schema?.mediaTypes?.[mediaType];
+  if (!mediaSchema || !mediaSchema.properties) return;
+
+  function isMapped(propKey) {
+    const prop = mediaSchema.properties[propKey];
+    if (!prop) return false;
+    if (prop.notMapped === true) return false;
+    return Boolean(prop.notionName && String(prop.notionName).trim().length > 0);
+  }
+
+  // 1. Casting (Films / Séries) : masquer si non mappé ou si jeu
+  if (dom.groupCasts) {
+    if (mediaType === 'game') {
+      dom.groupCasts.style.display = 'none';
+    } else {
+      dom.groupCasts.style.display = isMapped('casts') ? 'block' : 'none';
+    }
+  }
+
+  // 2. Bilan Annuel (Yearly Review)
+  const yearGroup = dom.groupYearWatch || dom.selectYearWatch?.closest('.form-group');
+  if (yearGroup) {
+    yearGroup.style.display = isMapped('year') ? 'block' : 'none';
+  }
+
+  // 3. Notes / Synopsis
+  if (dom.groupNotes) {
+    dom.groupNotes.style.display = isMapped('notes') ? 'block' : 'none';
+  }
+
+  // 4. Modes de jeu & Copie (#rowGameMeta pour jeux vidéo)
+  if (dom.rowGameMeta) {
+    if (mediaType !== 'game') {
+      dom.rowGameMeta.style.display = 'none';
+    } else {
+      const supportMapped = isMapped('playerSupport');
+      const copyMapped = isMapped('copy');
+      const supportGroup = dom.groupPlayerSupport || dom.inputPlayerSupport?.closest('.form-group');
+      const copyGroup = dom.groupGameCopy || dom.selectGameCopy?.closest('.form-group');
+
+      if (!supportMapped && !copyMapped) {
+        if (supportGroup) supportGroup.style.display = 'none';
+        if (copyGroup) copyGroup.style.display = 'none';
+        dom.rowGameMeta.style.display = 'none';
+      } else {
+        dom.rowGameMeta.style.display = 'flex';
+        if (supportGroup) {
+          supportGroup.style.display = supportMapped ? '' : 'none';
+          supportGroup.style.flex = copyMapped ? '1' : '1 1 100%';
+        }
+        if (copyGroup) {
+          copyGroup.style.display = copyMapped ? '' : 'none';
+          copyGroup.style.flex = supportMapped ? '1' : '1 1 100%';
+        }
+      }
+    }
+  }
+
+  // 5. Plateforme & Date vue / jouée (#rowPlatformDate)
+  if (dom.rowPlatformDate) {
+    const platMapped = isMapped('platform');
+    const dateMapped = isMapped('releaseDate') || isMapped('dateViewed');
+    const platGroup = dom.groupPlatform || dom.selectPlatform?.closest('.form-group');
+    const dateGroup = dom.groupDateViewed || dom.inputDateViewed?.closest('.form-group');
+
+    if (!platMapped && !dateMapped) {
+      if (platGroup) platGroup.style.display = 'none';
+      if (dateGroup) dateGroup.style.display = 'none';
+      dom.rowPlatformDate.style.display = 'none';
+    } else {
+      dom.rowPlatformDate.style.display = 'flex';
+      if (platGroup) {
+        platGroup.style.display = platMapped ? '' : 'none';
+        platGroup.style.flex = dateMapped ? '1' : '1 1 100%';
+      }
+      if (dateGroup) {
+        dateGroup.style.display = dateMapped ? '' : 'none';
+        dateGroup.style.flex = platMapped ? '1' : '1 1 100%';
+      }
+    }
+  }
+
+  // 6. Genres
+  if (dom.groupGenres) {
+    dom.groupGenres.style.display = isMapped('genres') ? 'block' : 'none';
+  }
+
+  // 7. Statuts
+  const statusMapped = isMapped('status');
+  if (mediaType === 'game') {
+    if (dom.groupGameStatus) dom.groupGameStatus.style.display = statusMapped ? 'block' : 'none';
+    if (dom.groupWatchStatus) dom.groupWatchStatus.style.display = 'none';
+  } else {
+    if (dom.groupWatchStatus) dom.groupWatchStatus.style.display = statusMapped ? 'block' : 'none';
+    if (dom.groupGameStatus) dom.groupGameStatus.style.display = 'none';
+  }
+
+  // 8. Note & Favori
+  const ratingMapped = isMapped('rating');
+  const favMapped = isMapped('favourite') || isMapped('isFavourite');
+  const ratingGroup = dom.starsPicker?.closest('.form-group');
+  const favGroup = dom.checkFavourite?.closest('.form-group');
+  if (ratingGroup) ratingGroup.style.display = ratingMapped ? '' : 'none';
+  if (favGroup) favGroup.style.display = favMapped ? '' : 'none';
+
+  // 9. Épisodes et sous-type (Séries TV)
+  if (mediaType === 'tv') {
+    const epMapped = isMapped('totalEp') || isMapped('currentEp');
+    if (dom.rowEpisodes) dom.rowEpisodes.style.display = epMapped ? 'flex' : 'none';
+    const typeMapped = isMapped('type') || isMapped('tvSubType');
+    if (dom.groupTvType) dom.groupTvType.style.display = typeMapped ? 'block' : 'none';
+  }
+}
+
+/**
+ * Exécute le test non-destructif du schéma Notion depuis la vue Paramètres de la popup
+ */
+async function handleRunPopupDiagnostic() {
+  if (!dom.popupDiagnosticFeedback) return;
+  dom.popupDiagnosticFeedback.style.display = 'block';
+  dom.popupDiagnosticFeedback.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <div class="spinner" style="width: 14px; height: 14px; border-width: 2px;"></div>
+      <span>Vérification des bases Notion en cours...</span>
+    </div>
+  `;
+
+  try {
+    const activeSchema = state.schema || DEFAULT_SCHEMA;
+    const apiKey = state.config?.notionApiKey || dom.settingNotionKey?.value || '';
+
+    const report = await runDryRunDiagnostic(activeSchema, apiKey, {
+      fallbackConfig: state.config || {}
+    });
+
+    const isOk = report.overallStatus === 'ok';
+    const isWarn = report.overallStatus === 'warning';
+    const statusIcon = isOk ? '🟢' : (isWarn ? '🟠' : '🔴');
+    const statusTitle = isOk
+      ? 'Schéma Notion 100% conforme'
+      : (isWarn ? 'Schéma fonctionnel avec avertissements' : 'Erreurs de configuration détectées');
+
+    let pillsHtml = `
+      <div style="margin-top: 6px; margin-bottom: 8px;">
+        <span class="diag-summary-pill pill-ok">✓ ${report.summary.valid} valides</span>
+        ${report.summary.warnings > 0 ? `<span class="diag-summary-pill pill-warning">⚠️ ${report.summary.warnings} alertes</span>` : ''}
+        ${report.summary.errors > 0 ? `<span class="diag-summary-pill pill-error">✕ ${report.summary.errors} erreurs</span>` : ''}
+        ${report.summary.skipped > 0 ? `<span class="diag-summary-pill" style="background: rgba(148,163,184,0.15); color: #94a3b8; border: 1px solid rgba(148,163,184,0.3);">⚪ ${report.summary.skipped} ignorés</span>` : ''}
+      </div>
+    `;
+
+    let detailsList = '';
+    report.databases.forEach(db => {
+      if (db.error) {
+        detailsList += `<div style="color: #f87171; font-size: 11.5px; margin-bottom: 3px;">✕ <strong>${escapeHtml(db.name)}</strong>: ${escapeHtml(db.error)}</div>`;
+      } else {
+        const errors = db.properties.filter(p => p.status === 'error');
+        const warnings = db.properties.filter(p => p.status === 'warning');
+        if (errors.length > 0) {
+          detailsList += `<div style="color: #f87171; font-size: 11.5px; margin-bottom: 3px;">✕ <strong>${escapeHtml(db.name)}</strong>: ${errors.length} colonne(s) introuvable(s) (${escapeHtml(errors.map(e => e.notionName).join(', '))})</div>`;
+        } else if (warnings.length > 0) {
+          detailsList += `<div style="color: #fbbf24; font-size: 11.5px; margin-bottom: 3px;">⚠️ <strong>${escapeHtml(db.name)}</strong>: ${warnings.length} avertissement(s) de type</div>`;
+        } else {
+          detailsList += `<div style="color: #34d399; font-size: 11.5px; margin-bottom: 3px;">✓ <strong>${escapeHtml(db.name)}</strong>: toutes colonnes conformes</div>`;
+        }
+      }
+    });
+
+    dom.popupDiagnosticFeedback.innerHTML = `
+      <div style="font-weight: 600; display: flex; align-items: center; gap: 6px;">
+        <span>${statusIcon}</span>
+        <span>${statusTitle}</span>
+      </div>
+      ${pillsHtml}
+      <div style="margin-top: 6px;">${detailsList}</div>
+    `;
+  } catch (err) {
+    dom.popupDiagnosticFeedback.innerHTML = `
+      <div style="color: #f87171; font-weight: 600;">🔴 Échec du diagnostic</div>
+      <p style="margin: 4px 0 0; font-size: 11.5px;">${escapeHtml(err.message || String(err))}</p>
+    `;
+  }
+}
+

@@ -141,6 +141,37 @@ export const browserAPI = {
           reject(err);
         }
       });
+    },
+
+    create: async (createProperties) => {
+      const g = getGlobal();
+      if (g.browser?.tabs?.create) {
+        return g.browser.tabs.create(createProperties);
+      }
+      const root = getBrowserRoot();
+      if (!root.tabs?.create) return { id: 0, ...createProperties };
+      return new Promise((resolve, reject) => {
+        try {
+          let settled = false;
+          const res = root.tabs.create(createProperties, (tab) => {
+            if (settled) return;
+            settled = true;
+            if (root.runtime?.lastError) {
+              reject(new Error(root.runtime.lastError.message || String(root.runtime.lastError)));
+            } else {
+              resolve(tab || { id: 0, ...createProperties });
+            }
+          });
+          if (res && typeof res.then === 'function') {
+            res.then(
+              (val) => { if (!settled) { settled = true; resolve(val || { id: 0, ...createProperties }); } },
+              (err) => { if (!settled) { settled = true; reject(err); } }
+            );
+          }
+        } catch (err) {
+          reject(err);
+        }
+      });
     }
   },
 
@@ -191,6 +222,40 @@ export const browserAPI = {
         removeListener: () => {},
         hasListener: () => false
       };
+    },
+
+    openOptionsPage: async () => {
+      const g = getGlobal();
+      if (g.browser?.runtime?.openOptionsPage) {
+        return g.browser.runtime.openOptionsPage();
+      }
+      const root = getBrowserRoot();
+      if (root.runtime?.openOptionsPage) {
+        return new Promise((resolve, reject) => {
+          try {
+            let settled = false;
+            const res = root.runtime.openOptionsPage(() => {
+              if (settled) return;
+              settled = true;
+              if (root.runtime?.lastError) {
+                reject(new Error(root.runtime.lastError.message || String(root.runtime.lastError)));
+              } else {
+                resolve();
+              }
+            });
+            if (res && typeof res.then === 'function') {
+              res.then(
+                () => { if (!settled) { settled = true; resolve(); } },
+                (err) => { if (!settled) { settled = true; reject(err); } }
+              );
+            }
+          } catch (err) {
+            reject(err);
+          }
+        });
+      }
+      const url = browserAPI.runtime.getURL('options/options.html');
+      return browserAPI.tabs.create({ url, active: true });
     }
   },
 

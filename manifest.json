@@ -21,6 +21,10 @@
     },
     "default_title": "Culture Tracker - TMDb, TheGamesDB & Notion"
   },
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  },
   "content_scripts": [
     {
       "matches": [
@@ -35,6 +39,7 @@
   "web_accessible_resources": [
     {
       "resources": [
+        "options/*",
         "popup/popup.html",
         "popup/popup.css",
         "popup/popup.js",

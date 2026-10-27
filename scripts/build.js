@@ -245,6 +245,7 @@ export function collectRuntimeFiles() {
     { type: 'dir', rel: 'config' },
     { type: 'dir', rel: 'content' },
     { type: 'dir', rel: 'icons' },
+    { type: 'dir', rel: 'options' },
     { type: 'dir', rel: 'popup' },
     { type: 'dir', rel: 'services' }
   ];

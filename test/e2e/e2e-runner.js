@@ -5,20 +5,22 @@ import { registerTier1Tests } from './tiers/tier1-feature-coverage.test.js';
 import { registerTier2Tests } from './tiers/tier2-boundary-corner.test.js';
 import { registerTier3Tests } from './tiers/tier3-pairwise-combinations.test.js';
 import { registerTier4Tests } from './tiers/tier4-real-world-workflows.test.js';
+import { registerTier5Tests } from './tiers/tier5-schema-template-visual-options.test.js';
 
 async function main() {
   console.log('======================================================================');
   console.log('🚀 NOTION CULTURE TRACKER — E2E TEST SUITE RUNNER');
-  console.log('   Methodology: 4-Tier Opaque-Box Coverage (Tiers 1-4)');
-  console.log('   Target: 13 Core Features across Chrome, Firefox & Safari');
+  console.log('   Methodology: 5-Tier Opaque-Box Coverage (Tiers 1-5)');
+  console.log('   Target: Core Extension & Custom Visual Schema & Template Engine');
   console.log('======================================================================');
 
   const suite1 = registerTier1Tests();
   const suite2 = registerTier2Tests();
   const suite3 = registerTier3Tests();
   const suite4 = registerTier4Tests();
+  const suite5 = registerTier5Tests();
 
-  const suites = [suite1, suite2, suite3, suite4];
+  const suites = [suite1, suite2, suite3, suite4, suite5];
   const results = [];
   const globalStart = Date.now();
 

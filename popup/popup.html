@@ -145,11 +145,11 @@
 
           <!-- Games: Player Support & Copy -->
           <div class="form-row" id="rowGameMeta" style="display: none;">
-            <div class="form-group flex-1">
+            <div class="form-group flex-1" id="groupPlayerSupport">
               <label for="inputPlayerSupport" class="form-label">Modes de jeu</label>
               <input type="text" id="inputPlayerSupport" class="form-input" placeholder="Singleplayer, Co-op...">
             </div>
-            <div class="form-group flex-1">
+            <div class="form-group flex-1" id="groupGameCopy">
               <label for="selectGameCopy" class="form-label">Support / Copie</label>
               <select id="selectGameCopy" class="form-select">
                 <option value="Digital Copy" selected>Digital Copy</option>
@@ -199,20 +199,20 @@
 
           <!-- Platform & Date Viewed (For movies, series and games) -->
           <div class="form-row" id="rowPlatformDate">
-            <div class="form-group flex-1">
+            <div class="form-group flex-1" id="groupPlatform">
               <label for="selectPlatform" class="form-label" id="labelPlatform">Plateforme</label>
               <select id="selectPlatform" class="form-select">
                 <option value="">(Aucune)</option>
               </select>
             </div>
-            <div class="form-group flex-1">
+            <div class="form-group flex-1" id="groupDateViewed">
               <label for="inputDateViewed" class="form-label" id="labelDateViewed">Date vue / jouée</label>
               <input type="date" id="inputDateViewed" class="form-input">
             </div>
           </div>
 
           <!-- Bilan Annuel (Year Watch / Year Played) -->
-          <div class="form-group">
+          <div class="form-group" id="groupYearWatch">
             <label for="selectYearWatch" class="form-label" id="labelYearWatch">Lier au Bilan Annuel (Yearly Review)</label>
             <select id="selectYearWatch" class="form-select">
               <option value="">(Ne pas lier)</option>
@@ -300,6 +300,18 @@
         <h2>Paramètres & Connexion</h2>
         <p class="settings-intro">Vos clés et identifiants de bases de données Notion.</p>
 
+        <div class="options-banner-card" style="margin-bottom: 16px; padding: 12px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="font-size: 13px; font-weight: 600; color: #60a5fa; display: flex; align-items: center; gap: 6px;">
+            <span>⚙️</span> Configuration Visuelle Avancée
+          </div>
+          <p style="font-size: 12px; color: var(--text-secondary, #94a3b8); margin: 0; line-height: 1.4;">
+            Personnalisez vos colonnes Notion, activez le mode base unifiée et configurez vos templates de page dans l'onglet dédié.
+          </p>
+          <button type="button" id="btnOpenOptionsPage" class="primary-btn" style="width: 100%; min-height: 44px; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; font-size: 13px; cursor: pointer;">
+            <span>🛠️</span> Ouvrir la page de configuration avancée
+          </button>
+        </div>
+
         <form id="settingsForm">
           <div class="form-group">
             <label for="settingTmdbKey" class="form-label">Clé API TMDb (v3)</label>
@@ -362,8 +374,10 @@
 
           <div class="settings-actions">
             <button type="button" id="btnTestAllApis" class="secondary-btn">🔍 Tester toutes les APIs</button>
+            <button type="button" id="btnRunPopupDiagnostic" class="secondary-btn">🧪 Tester le schéma</button>
             <button type="submit" class="primary-btn">Enregistrer</button>
           </div>
+          <div id="popupDiagnosticFeedback" class="diagnostic-feedback-box" style="display: none; margin-top: 12px;"></div>
         </form>
       </div>
     </section>

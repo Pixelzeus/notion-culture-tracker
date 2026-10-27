@@ -43,8 +43,9 @@ export function buildNotionProperties(itemData, mediaSchema, lookupTables = {}) 
   const schemaProps = mediaSchema.properties;
 
   for (const [propKey, propDef] of Object.entries(schemaProps)) {
+    if (propDef.notMapped === true) continue;
     const notionName = propDef.notionName;
-    if (!notionName) continue;
+    if (!notionName || !String(notionName).trim()) continue;
 
     const propType = (propDef.type || '').toLowerCase();
     const rawVal = (itemData[propKey] !== undefined && itemData[propKey] !== null && itemData[propKey] !== '')

@@ -1,6 +1,16 @@
 {
   "version": "1.0.0",
   "description": "Configuration déclarative du schéma Notion pour Culture Tracker. Modifiable par n'importe quel agent IA.",
+  "databaseMode": "distinct",
+  "unifiedDatabase": {
+    "databaseId": "",
+    "typeProperty": "Type",
+    "typeValues": {
+      "movie": "Film",
+      "tv": "Série TV",
+      "game": "Jeu Vidéo"
+    }
+  },
   "mediaTypes": {
     "movie": {
       "name": "Films",
