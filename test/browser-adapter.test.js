@@ -47,8 +47,16 @@ async function runTests() {
   const permsRequest = await browserAPI.permissions.request({ origins: ['*'] });
   assert(permsRequest === true, 'permissions.request defaults to true when unconfigured');
 
+  let emptyOpened = false;
+  try {
+    await browserAPI.runtime.openOptionsPage();
+    emptyOpened = true;
+  } catch (_) {}
+  assert(emptyOpened === true, 'openOptionsPage succeeds without throwing in unconfigured environment');
+
   console.log('\n🧪 2. Tests in Firefox / Safari Environment (globalThis.browser with native Promises)');
   const mockStorageStore = {};
+  let ffOptionsOpened = false;
   globalThis.browser = {
     storage: {
       local: {
@@ -65,11 +73,13 @@ async function runTests() {
       query: async (queryInfo) => [
         { id: 42, url: 'https://www.notion.so/my-workspace', active: true }
       ],
-      sendMessage: async (tabId, msg) => ({ receivedTabId: tabId, ...msg })
+      sendMessage: async (tabId, msg) => ({ receivedTabId: tabId, ...msg }),
+      create: async (createProps) => ({ id: 99, ...createProps })
     },
     runtime: {
       getURL: (path) => `moz-extension://mock-uuid/${path}`,
       sendMessage: async (msg) => ({ echo: msg }),
+      openOptionsPage: async () => { ffOptionsOpened = true; },
       onMessage: {
         addListener: () => {}
       }
@@ -101,6 +111,19 @@ async function runTests() {
 
   const ffPermsRequest = await browserAPI.permissions.request({ origins: ['https://api.thegamesdb.net/*'] });
   assert(ffPermsRequest === true, 'Firefox permissions.request returns true');
+
+  await browserAPI.runtime.openOptionsPage();
+  assert(ffOptionsOpened === true, 'Firefox browser.runtime.openOptionsPage executed successfully');
+
+  // Test fallback if openOptionsPage throws in Firefox
+  let ffTabCreatedFallback = false;
+  globalThis.browser.runtime.openOptionsPage = async () => { throw new Error('Firefox native options open failed'); };
+  globalThis.browser.tabs.create = async (props) => {
+    if (props.url.includes('options/options.html')) ffTabCreatedFallback = true;
+    return { id: 101, ...props };
+  };
+  await browserAPI.runtime.openOptionsPage();
+  assert(ffTabCreatedFallback === true, 'Firefox falls back to tabs.create when openOptionsPage throws');
 
   console.log('\n🧪 3. Tests in Chrome Environment (globalThis.chrome with callback-style APIs)');
   delete globalThis.browser;
