@@ -238,7 +238,17 @@ function setupEventListeners() {
       try {
         await browserAPI.runtime.openOptionsPage();
       } catch (err) {
-        console.error('Erreur lors de l\'ouverture de la page d\'options:', err);
+        console.warn('Erreur ouverture options, tentative de repli direct:', err);
+        try {
+          const url = browserAPI.runtime.getURL('options/options.html');
+          if (browserAPI.tabs?.create) {
+            await browserAPI.tabs.create({ url, active: true });
+          } else {
+            window.open(url, '_blank');
+          }
+        } catch (tabErr) {
+          console.error('Impossible d\'ouvrir la page d\'options:', tabErr);
+        }
       }
     });
   }

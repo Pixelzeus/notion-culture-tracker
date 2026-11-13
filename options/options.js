@@ -62,12 +62,18 @@ const state = {
 // DOM references cache
 const dom = {};
 
-document.addEventListener('DOMContentLoaded', async () => {
+async function init() {
   cacheDomElements();
   setupEventListeners();
   await loadState();
   renderAll();
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
 
 function cacheDomElements() {
   dom.notionApiKeyInput = document.getElementById('notionApiKeyInput');
@@ -2002,7 +2008,7 @@ function renderLivePreview() {
         if (resolvedUrl && (resolvedUrl.startsWith('http://') || resolvedUrl.startsWith('https://'))) {
           return `
             <div class="notion-preview-img-wrapper">
-              <img src="${escapeHtml(resolvedUrl)}" class="notion-preview-img" alt="Affiche" onerror="this.parentElement.innerHTML='<div class=\\'notion-preview-img-box\\'><span>🖼️ Image introuvable</span></div>'">
+              <img src="${escapeHtml(resolvedUrl)}" class="notion-preview-img" alt="Affiche">
             </div>
           `;
         }
@@ -2065,6 +2071,16 @@ function renderLivePreview() {
   const blocksHtml = blocks.map(renderBlockPreview).join('\n');
 
   dom.notionPreviewCanvas.innerHTML = headerHtml + blocksHtml;
+
+  // Attachement sécurisé des écouteurs d'erreur sans violation CSP (pas d'inline onerror)
+  dom.notionPreviewCanvas.querySelectorAll('img.notion-preview-img').forEach((img) => {
+    img.addEventListener('error', () => {
+      const parent = img.parentElement;
+      if (parent) {
+        parent.innerHTML = '<div class="notion-preview-img-box"><span>🖼️ Image introuvable</span></div>';
+      }
+    });
+  });
 }
 
 export { validateSchema };

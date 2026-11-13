@@ -227,12 +227,17 @@ export const browserAPI = {
     openOptionsPage: async () => {
       const g = getGlobal();
       if (g.browser?.runtime?.openOptionsPage) {
-        return g.browser.runtime.openOptionsPage();
+        try {
+          await g.browser.runtime.openOptionsPage();
+          return;
+        } catch (err) {
+          console.warn('browser.runtime.openOptionsPage failed:', err);
+        }
       }
       const root = getBrowserRoot();
       if (root.runtime?.openOptionsPage) {
-        return new Promise((resolve, reject) => {
-          try {
+        try {
+          await new Promise((resolve, reject) => {
             let settled = false;
             const res = root.runtime.openOptionsPage(() => {
               if (settled) return;
@@ -249,13 +254,31 @@ export const browserAPI = {
                 (err) => { if (!settled) { settled = true; reject(err); } }
               );
             }
-          } catch (err) {
-            reject(err);
-          }
-        });
+          });
+          return;
+        } catch (err) {
+          console.warn('chrome.runtime.openOptionsPage failed:', err);
+        }
       }
-      const url = browserAPI.runtime.getURL('options/options.html');
-      return browserAPI.tabs.create({ url, active: true });
+      try {
+        const url = browserAPI.runtime.getURL('options/options.html');
+        if (browserAPI.tabs?.create) {
+          await browserAPI.tabs.create({ url, active: true });
+          return;
+        }
+      } catch (err) {
+        console.warn('tabs.create fallback failed:', err);
+      }
+      try {
+        await browserAPI.runtime.sendMessage({ type: 'OPEN_OPTIONS_PAGE' });
+        return;
+      } catch (_) {
+        // Fallback ultime
+      }
+      const fallbackUrl = browserAPI.runtime.getURL('options/options.html');
+      if (typeof window !== 'undefined') {
+        window.open(fallbackUrl, '_blank');
+      }
     }
   },
 

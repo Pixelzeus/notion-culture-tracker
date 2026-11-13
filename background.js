@@ -3,17 +3,33 @@
 
 const api = typeof browser !== 'undefined' ? browser : (typeof chrome !== 'undefined' ? chrome : null);
 
-// 1. Injection dynamique des en-têtes Access-Control-Allow-Origin (supporté dans Firefox avec webRequestBlocking)
+// 1. Injection dynamique des en-têtes Access-Control-* (supporté dans Firefox avec webRequestBlocking)
 if (api?.webRequest?.onHeadersReceived) {
   try {
     api.webRequest.onHeadersReceived.addListener(
       (details) => {
         const responseHeaders = details?.responseHeaders || [];
-        const hasAcao = responseHeaders.some(h => (h?.name || '').toLowerCase() === 'access-control-allow-origin');
-        if (!hasAcao && details?.responseHeaders) {
-          details.responseHeaders.push({ name: 'Access-Control-Allow-Origin', value: '*' });
+        const lowerNames = responseHeaders.map(h => (h?.name || '').toLowerCase());
+
+        if (!lowerNames.includes('access-control-allow-origin')) {
+          responseHeaders.push({ name: 'Access-Control-Allow-Origin', value: '*' });
         }
-        return { responseHeaders: details?.responseHeaders || [] };
+        if (!lowerNames.includes('access-control-allow-headers')) {
+          responseHeaders.push({
+            name: 'Access-Control-Allow-Headers',
+            value: 'Authorization, Notion-Version, Content-Type, Accept, Origin, X-Requested-With, *'
+          });
+        }
+        if (!lowerNames.includes('access-control-allow-methods')) {
+          responseHeaders.push({
+            name: 'Access-Control-Allow-Methods',
+            value: 'GET, POST, PATCH, PUT, DELETE, OPTIONS'
+          });
+        }
+        if (!lowerNames.includes('access-control-max-age')) {
+          responseHeaders.push({ name: 'Access-Control-Max-Age', value: '86400' });
+        }
+        return { responseHeaders };
       },
       {
         urls: [
@@ -32,7 +48,7 @@ if (api?.webRequest?.onHeadersReceived) {
   }
 }
 
-// 2. Proxy universel pour les requêtes fetch cross-origin
+// 2. Gestionnaire universel de messages d'extension (Proxy fetch et ouverture d'options)
 if (api?.runtime?.onMessage) {
   api.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message?.type === 'PROXY_FETCH') {
@@ -63,6 +79,29 @@ if (api?.runtime?.onMessage) {
         });
 
       return true; // Garde le canal ouvert pour la réponse asynchrone
+    }
+
+    if (message?.type === 'OPEN_OPTIONS_PAGE') {
+      (async () => {
+        try {
+          if (api.runtime?.openOptionsPage) {
+            await api.runtime.openOptionsPage();
+          } else if (api.tabs?.create) {
+            await api.tabs.create({ url: api.runtime.getURL('options/options.html'), active: true });
+          }
+          sendResponse({ success: true });
+        } catch (e) {
+          if (api.tabs?.create) {
+            api.tabs.create({ url: api.runtime.getURL('options/options.html'), active: true })
+              .then(() => sendResponse({ success: true }))
+              .catch(err => sendResponse({ success: false, error: err.message }));
+          } else {
+            sendResponse({ success: false, error: e?.message || String(e) });
+          }
+        }
+      })();
+
+      return true;
     }
   });
 }
