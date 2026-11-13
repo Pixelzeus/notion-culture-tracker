@@ -10,10 +10,10 @@
  * - Apple Safari (MV3 with service_worker, standard WebExtension format)
  *
  * Produces unpacked extension folders in dist/<browser>/ and release archives:
- * - dist/culture-tracker-v1.5.0-chrome.zip
- * - dist/culture-tracker-v1.5.0-firefox.zip
- * - dist/culture-tracker-v1.5.0-firefox.xpi
- * - dist/culture-tracker-v1.5.0-safari.zip
+ * - dist/culture-tracker-v1.6.0-chrome.zip
+ * - dist/culture-tracker-v1.6.0-firefox.zip
+ * - dist/culture-tracker-v1.6.0-firefox.xpi
+ * - dist/culture-tracker-v1.6.0-safari.zip
  *
  * Zero external npm runtime dependencies (uses Node.js built-ins: fs, path, zlib, crypto).
  */
@@ -168,7 +168,7 @@ export function getProjectVersion() {
       if (m.version) return m.version;
     } catch (_) {}
   }
-  return '1.5.0';
+  return '1.6.0';
 }
 
 /**

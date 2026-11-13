@@ -6,16 +6,16 @@
  *
  * Automates the release publication and multi-browser asset distribution to GitHub:
  * - Reads GitHub token from environment (GITHUB_TOKEN) or git remote URL.
- * - Targets repository Pixelzeus/notion-culture-tracker and release tag v1.5.0.
+ * - Targets repository Pixelzeus/notion-culture-tracker and release tag v1.6.0.
  * - Updates release title to:
- *   "Culture Tracker v1.5.0 — Multi-navigateurs (Firefox, Chrome & Safari)"
+ *   "Culture Tracker v1.6.0 — Rework UI Notion & Multi-navigateurs (Firefox, Chrome & Safari)"
  * - Updates release body with comprehensive multi-platform changelog and 3-browser install guides.
  * - Deletes any duplicate existing release assets to prevent HTTP 422 errors.
  * - Uploads all 4 binary assets from dist/:
- *   * dist/culture-tracker-v1.5.0-chrome.zip   (application/zip)
- *   * dist/culture-tracker-v1.5.0-firefox.xpi  (application/x-xpinstall)
- *   * dist/culture-tracker-v1.5.0-firefox.zip  (application/zip)
- *   * dist/culture-tracker-v1.5.0-safari.zip   (application/zip)
+ *   * dist/culture-tracker-v1.6.0-chrome.zip   (application/zip)
+ *   * dist/culture-tracker-v1.6.0-firefox.xpi  (application/x-xpinstall)
+ *   * dist/culture-tracker-v1.6.0-firefox.zip  (application/zip)
+ *   * dist/culture-tracker-v1.6.0-safari.zip   (application/zip)
  * - Verifies attached assets via GitHub REST API query.
  *
  * Zero external npm runtime dependencies (uses Node.js built-ins: https, fs, path, child_process, url).
@@ -33,14 +33,14 @@ const ROOT_DIR = path.resolve(__dirname, '..');
 const DIST_DIR = path.join(ROOT_DIR, 'dist');
 
 export const DEFAULT_REPO = 'Pixelzeus/notion-culture-tracker';
-export const DEFAULT_TAG = 'v1.5.0';
-export const RELEASE_TITLE = 'Culture Tracker v1.5.0 — Multi-navigateurs (Firefox, Chrome & Safari)';
+export const DEFAULT_TAG = 'v1.6.0';
+export const RELEASE_TITLE = 'Culture Tracker v1.6.0 — Rework UI Notion & Multi-navigateurs (Firefox, Chrome & Safari)';
 
 export const TARGET_ASSETS = [
-  { name: 'culture-tracker-v1.5.0-chrome.zip', type: 'application/zip' },
-  { name: 'culture-tracker-v1.5.0-firefox.xpi', type: 'application/x-xpinstall' },
-  { name: 'culture-tracker-v1.5.0-firefox.zip', type: 'application/zip' },
-  { name: 'culture-tracker-v1.5.0-safari.zip', type: 'application/zip' }
+  { name: 'culture-tracker-v1.6.0-chrome.zip', type: 'application/zip' },
+  { name: 'culture-tracker-v1.6.0-firefox.xpi', type: 'application/x-xpinstall' },
+  { name: 'culture-tracker-v1.6.0-firefox.zip', type: 'application/zip' },
+  { name: 'culture-tracker-v1.6.0-safari.zip', type: 'application/zip' }
 ];
 
 /**
@@ -161,7 +161,44 @@ export async function getReleaseByTag(repo, tag, token) {
   });
 
   if (res.statusCode !== 200) {
-    throw new Error(`Failed to get release for tag "${tag}" on ${repo}: HTTP ${res.statusCode} — ${res.data}`);
+    const error = new Error(`Failed to get release for tag "${tag}" on ${repo}: HTTP ${res.statusCode} — ${res.data}`);
+    error.statusCode = res.statusCode;
+    throw error;
+  }
+
+  return res.json;
+}
+
+/**
+ * Creates a new release on GitHub.
+ * @param {string} repo
+ * @param {string} tag
+ * @param {string} title
+ * @param {string} body
+ * @param {string} token
+ * @returns {Promise<object>}
+ */
+export async function createRelease(repo, tag, title, body, token) {
+  const payload = JSON.stringify({
+    tag_name: tag,
+    name: title,
+    body: body,
+    draft: false,
+    prerelease: false
+  });
+  const res = await githubRequest({
+    hostname: 'api.github.com',
+    path: `/repos/${repo}/releases`,
+    method: 'POST',
+    headers: {
+      'Authorization': `token ${token}`,
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(payload, 'utf8')
+    }
+  }, payload);
+
+  if (res.statusCode !== 201) {
+    throw new Error(`Failed to create release for tag "${tag}": HTTP ${res.statusCode} — ${res.data}`);
   }
 
   return res.json;
@@ -276,48 +313,55 @@ export async function listReleaseAssets(repo, releaseId, token) {
 }
 
 /**
- * Builds the comprehensive release notes content for v1.5.0.
+ * Builds the comprehensive release notes content for v1.6.0.
  * Preserves the original changelog section while adding multi-platform details.
  * @returns {string}
  */
 export function buildReleaseNotes() {
-  return `## 🍿 Culture Tracker v1.5.0 — Multi-navigateurs (Firefox, Chrome & Safari)
+  return `## 🍿 Culture Tracker v1.6.0 — Rework UI Notion & Multi-navigateurs (Firefox, Chrome & Safari)
 
 Extension officielle pour importer facilement vos **Films**, **Séries** (TMDb) et **Jeux Vidéo** (TheGamesDB & Steam) dans votre espace **Notion** avec templates de page automatiques et jaquettes officielles.
 
-### 🚀 Nouveautés de la version 1.5.0
-* **Support Multi-Navigateurs Complet** : Packages Manifest V3 officiels disponibles pour **Google Chrome**, **Mozilla Firefox** et **Apple Safari**.
+### 🚀 Nouveautés de la version 1.6.0
+* **Rework Ergonomique Majeur de l'Association des Bases Notion** :
+  * 🪄 **Auto-Détection en 1 Clic** : Nouveau bouton \`Auto-détecter toutes les bases\` interrogeant l'API Notion Search pour lister et pré-sélectionner automatiquement vos bases de données (Films, Séries, Jeux Vidéo ou Base Unifiée).
+  * 📋 **Menus Déroulants Intelligents** : Sélecteur visuel avec émojis, titres et statuts, avec possibilité de basculer en saisie manuelle si désiré.
+  * 🧹 **Nettoyage et Désensibilisation d'URL Robuste** : Nettoyage automatique en temps réel des identifiants Notion collés, supprimant les paramètres de requête (\`?v=...\`), ancres (\`#...\`), slugs et chemins d'accès pour éliminer définitivement l'erreur Notion 400 (\`query.v should not be present\`).
+  * ⚡ **Inspection Immédiate des Colonnes** : Dès la sélection d'une base dans la liste, ses colonnes et propriétés sont automatiquement analysées et pré-mappées.
+* **Support Multi-Navigateurs Complet & Corrections Zen Browser / Firefox** :
+  * Packages Manifest V3 officiels disponibles pour **Google Chrome**, **Mozilla Firefox / Zen Browser** et **Apple Safari**.
+  * Résolution des problèmes de chargement des options avancées sous Firefox / Zen Browser, mise à niveau CSP et gestion cross-origin.
 * **Adaptation Mobile & Tablette (UX Tactile)** : Interface responsive fluide sans débordement horizontal (largeurs <= 420px), zones tactiles confortables (>= 44x44px) et disposition empilable des formulaires sur écrans étroits (<= 380px).
 * **Intégration Directe dans l'UI de Notion** : Un bouton flottant discret \`🍿 Culture Tracker\` et le raccourci \`Alt + C\` déploient un panneau latéral rétractable (460px) directement sur Notion (avec bascule 100vw sur mobile <= 480px).
 * **Jeux Vidéo Multiplateformes** : Support complet de TheGamesDB et Steam avec jaquettes HD, genres, plateformes, support joueurs et templates de page (\`Game Title Here\`).
 * **Films & Séries (TMDb)** : Affiches officielles, casting, dates de sortie, fournisseurs de streaming français (Netflix, Prime, Disney+...) et templates 2 colonnes avec sections dépliantes (*Pros/Cons*, *DLC*, *Guides*, *Screenshots*, *Notes*).
 * **Diagnostic en 1 Clic** : Bouton \`🔍 Tester toutes les APIs\` dans les paramètres (test simultané TMDb, Notion, TheGamesDB et Steam).
-* **Architecture Universelle & Modulaire** : Adaptateur universel (\`notion-adapter.js\`) et guide complet pour agents IA (\`AGENTS.md\`) pour adapter l'extension à n'importe quel template Notion.
 
 ### 📦 Fichiers Disponibles au Téléchargement
-* **Google Chrome / Chromium** (Edge, Brave, Opera) : \`culture-tracker-v1.5.0-chrome.zip\` (Manifest V3 avec Service Worker)
-* **Mozilla Firefox** : \`culture-tracker-v1.5.0-firefox.xpi\` et \`culture-tracker-v1.5.0-firefox.zip\` (Manifest V3 avec Event Script et Gecko ID)
-* **Apple Safari** : \`culture-tracker-v1.5.0-safari.zip\` (Manifest V3 WebExtension standard, compatible macOS, iPadOS, iOS)
+* **Google Chrome / Chromium** (Edge, Brave, Opera) : \`culture-tracker-v1.6.0-chrome.zip\` (Manifest V3 avec Service Worker)
+* **Mozilla Firefox & Zen Browser** : \`culture-tracker-v1.6.0-firefox.xpi\` et \`culture-tracker-v1.6.0-firefox.zip\` (Manifest V3 avec Event Script et Gecko ID)
+* **Apple Safari** : \`culture-tracker-v1.6.0-safari.zip\` (Manifest V3 WebExtension standard, compatible macOS, iPadOS, iOS)
 
 ---
 
 ### 🛠️ Guide d'Installation par Navigateur
 
 #### 1. Google Chrome & Chromium (Brave, Edge, Opera, Vivaldi)
-1. Téléchargez et décompressez **\`culture-tracker-v1.5.0-chrome.zip\`**.
+1. Téléchargez et décompressez **\`culture-tracker-v1.6.0-chrome.zip\`**.
 2. Dans la barre d'adresse de Chrome, accédez à \`chrome://extensions\`.
 3. Activez le commutateur **« Mode développeur »** (*Developer mode*) en haut à droite.
 4. Cliquez sur le bouton **« Charger l'extension non empaquetée »** (*Load unpacked*).
 5. Sélectionnez le dossier décompressé de l'extension.
 
-#### 2. Mozilla Firefox
-1. Téléchargez le fichier **\`culture-tracker-v1.5.0-firefox.xpi\`** ou **\`culture-tracker-v1.5.0-firefox.zip\`**.
-2. Dans Firefox, accédez à \`about:debugging#/runtime/this-firefox\`.
+#### 2. Mozilla Firefox & Zen Browser
+1. Téléchargez le fichier **\`culture-tracker-v1.6.0-firefox.zip\`** ou **\`culture-tracker-v1.6.0-firefox.xpi\`**.
+2. Dans Firefox ou Zen Browser, accédez à \`about:debugging#/runtime/this-firefox\`.
 3. Cliquez sur **« Charger un module temporaire... »** (*Load Temporary Add-on*).
 4. Sélectionnez le fichier \`.xpi\` téléchargé (ou le fichier \`manifest.json\` extrait de l'archive zip).
+*(Astuce Zen Browser / Firefox Developer Edition : pour autoriser l'installation permanente sans passer par AMO, passez \`xpinstall.signatures.required\` à \`false\` dans \`about:config\`)*.
 
 #### 3. Apple Safari (macOS, iPadOS & iOS)
-1. Téléchargez et décompressez **\`culture-tracker-v1.5.0-safari.zip\`**.
+1. Téléchargez et décompressez **\`culture-tracker-v1.6.0-safari.zip\`**.
 2. Dans Safari, ouvrez **Réglages** > **Avancé** et cochez **« Afficher les fonctionnalités pour les développeurs web »**.
 3. Dans le menu **Développement**, cochez **« Autoriser les extensions non signées »**.
 4. Vous pouvez charger le dossier décompressé ou utiliser l'outil de conversion Xcode :
@@ -355,10 +399,26 @@ export async function publishRelease(options = {}) {
   }
   console.log('');
 
-  // Step 2: Fetch existing release on GitHub
+  // Step 2: Fetch existing release or create it on GitHub
   console.log(`📡 Fetching release ${tag} from https://api.github.com/repos/${repo}...`);
-  const release = await getReleaseByTag(repo, tag, token);
-  console.log(`   ✔ Found release ID ${release.id}: "${release.name}"`);
+  let release;
+  try {
+    release = await getReleaseByTag(repo, tag, token);
+    console.log(`   ✔ Found release ID ${release.id}: "${release.name}"`);
+  } catch (err) {
+    if (err.statusCode === 404) {
+      console.log(`   ℹ Release for tag ${tag} not found. Creating new release on GitHub...`);
+      if (isDryRun) {
+        console.log(`   [DRY RUN] Skipping release creation for ${tag}`);
+        release = { id: 0, name: RELEASE_TITLE, upload_url: 'https://uploads.github.com/...', assets: [] };
+      } else {
+        release = await createRelease(repo, tag, RELEASE_TITLE, buildReleaseNotes(), token);
+        console.log(`   ✔ Created release ID ${release.id}: "${release.name}"`);
+      }
+    } else {
+      throw err;
+    }
+  }
   console.log(`   ✔ Upload URL: ${release.upload_url}`);
   const existingAssets = release.assets || [];
   console.log(`   ✔ Existing attached assets (${existingAssets.length}):`);
@@ -472,7 +532,7 @@ export async function runCLI() {
       console.log('  --dry-run          Simulate publication without modifying GitHub release');
       console.log('  --token=<token>    Specify GitHub Personal Access Token (defaults to env or git remote)');
       console.log('  --repo=<user/repo> GitHub repository (defaults to Pixelzeus/notion-culture-tracker)');
-      console.log('  --tag=<tag>        Release tag to target (defaults to v1.5.0)');
+      console.log('  --tag=<tag>        Release tag to target (defaults to v1.6.0)');
       console.log('  --help, -h         Show this help message');
       process.exit(0);
     }

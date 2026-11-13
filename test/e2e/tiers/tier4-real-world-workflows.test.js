@@ -311,20 +311,20 @@ export function registerTier4Tests() {
   suite.it('W08: Multi-Asset Release Packaging and Validation Workflow', () => {
     // Verify deliverable specifications for GitHub Releases publication
     const releasePlan = {
-      tag: 'v1.5.0',
+      tag: 'v1.6.0',
       repo: 'Pixelzeus/notion-culture-tracker',
       assets: [
-        { name: 'culture-tracker-v1.5.0-chrome.zip', type: 'application/zip' },
-        { name: 'culture-tracker-v1.5.0-firefox.xpi', type: 'application/x-xpinstall' },
-        { name: 'culture-tracker-v1.5.0-firefox.zip', type: 'application/zip' },
-        { name: 'culture-tracker-v1.5.0-safari.zip', type: 'application/zip' }
+        { name: 'culture-tracker-v1.6.0-chrome.zip', type: 'application/zip' },
+        { name: 'culture-tracker-v1.6.0-firefox.xpi', type: 'application/x-xpinstall' },
+        { name: 'culture-tracker-v1.6.0-firefox.zip', type: 'application/zip' },
+        { name: 'culture-tracker-v1.6.0-safari.zip', type: 'application/zip' }
       ]
     };
 
-    assertEqual(releasePlan.tag, 'v1.5.0', 'Release tag is v1.5.0');
+    assertEqual(releasePlan.tag, 'v1.6.0', 'Release tag is v1.6.0');
     assertEqual(releasePlan.assets.length, 4, '4 assets defined in release plan');
     for (const asset of releasePlan.assets) {
-      assert(asset.name.includes('v1.5.0'), `Asset ${asset.name} has version tag`);
+      assert(asset.name.includes('v1.6.0'), `Asset ${asset.name} has version tag`);
       assert(asset.type.includes('application/'), `Asset ${asset.name} has valid MIME type`);
     }
   });

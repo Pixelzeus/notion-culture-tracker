@@ -476,9 +476,9 @@ export function registerTier2Tests() {
   // =========================================================================
   // Feature 9: Multi-Browser Manifest Generation (Boundary & Corner Cases)
   // =========================================================================
-  suite.it('F9-T2-1: All browser target manifests maintain identical version number 1.5.0', () => {
+  suite.it('F9-T2-1: All browser target manifests maintain identical version number 1.6.0', () => {
     const json = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
-    assertEqual(json.version, '1.5.0', 'Manifest version must be 1.5.0');
+    assertEqual(json.version, '1.6.0', 'Manifest version must be 1.6.0');
   });
 
   suite.it('F9-T2-2: Chrome MV3 disallows gecko browser_specific_settings', () => {
@@ -526,11 +526,11 @@ export function registerTier2Tests() {
     assertEqual(zipMagic[0], 0x50, 'Zip magic header verified');
   });
 
-  suite.it('F10-T2-3: Artifact filenames follow project naming convention (culture-tracker-v1.5.0-*.zip)', () => {
-    const pattern = /^culture-tracker-v1\.5\.0-(chrome|firefox|safari)\.zip$/;
-    assert(pattern.test('culture-tracker-v1.5.0-chrome.zip'), 'Chrome package name valid');
-    assert(pattern.test('culture-tracker-v1.5.0-firefox.zip'), 'Firefox package name valid');
-    assert(pattern.test('culture-tracker-v1.5.0-safari.zip'), 'Safari package name valid');
+  suite.it('F10-T2-3: Artifact filenames follow project naming convention (culture-tracker-v1.6.0-*.zip)', () => {
+    const pattern = /^culture-tracker-v1\.[56]\.0-(chrome|firefox|safari)\.zip$/;
+    assert(pattern.test('culture-tracker-v1.6.0-chrome.zip'), 'Chrome package name valid');
+    assert(pattern.test('culture-tracker-v1.6.0-firefox.zip'), 'Firefox package name valid');
+    assert(pattern.test('culture-tracker-v1.6.0-safari.zip'), 'Safari package name valid');
   });
 
   suite.it('F10-T2-4: Packaging script handles missing destination directory by creating it recursively', () => {

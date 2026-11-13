@@ -896,8 +896,9 @@ export function registerTier5Tests() {
   });
 
   suite.it('R5-T5-07: culture-tracker-schema.json export structure conforms to validateSchema specification', () => {
+    const currentVersion = getProjectVersion();
     const exportPayload = {
-      version: '1.5.0',
+      version: currentVersion,
       description: 'Export de configuration Culture Tracker',
       exportedAt: new Date().toISOString(),
       databaseMode: 'distinct',
@@ -906,7 +907,7 @@ export function registerTier5Tests() {
     };
     const val = validateSchema(exportPayload);
     assertEqual(val.valid, true, 'Exported payload passes validation');
-    assertEqual(exportPayload.version, '1.5.0', 'Version matches project');
+    assertEqual(exportPayload.version, currentVersion, 'Version matches project');
     assert(exportPayload.mediaTypes.movie !== undefined, 'Export contains movie config');
     assert(exportPayload.mediaTypes.tv !== undefined, 'Export contains tv config');
     assert(exportPayload.mediaTypes.game !== undefined, 'Export contains game config');
@@ -1022,7 +1023,7 @@ export function registerTier5Tests() {
   suite.it('R5-T5-14: End-to-End User Journey: Options configuration -> Export -> Adapt Popup -> Diagnostic -> Notion Payload', async () => {
     // 1. User configures unified database with custom property mappings
     const userConfiguredSchema = {
-      version: '1.5.0',
+      version: getProjectVersion(),
       databaseMode: 'unified',
       unifiedDatabase: {
         databaseId: '312aec4b87d9815bbf60d3fc5847d424',

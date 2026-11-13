@@ -1,6 +1,6 @@
 {
   "name": "notion-culture-tracker",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Ajoutez rapidement vos films, séries et jeux vidéo dans votre espace Notion avec TMDb, TheGamesDB et Steam.",
   "type": "module",
   "scripts": {

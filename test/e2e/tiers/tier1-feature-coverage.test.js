@@ -499,12 +499,12 @@ export function registerTier1Tests() {
     assertEqual(buildScripts.length, 4, 'Build scripts specification covers all targets');
   });
 
-  suite.it('F11-T1-5: Package version matches release version 1.5.0', () => {
+  suite.it('F11-T1-5: Package version matches release version 1.6.0', () => {
     if (fs.existsSync(PACKAGE_JSON)) {
       const pkg = JSON.parse(fs.readFileSync(PACKAGE_JSON, 'utf8'));
-      assertEqual(pkg.version, '1.5.0', 'package.json version must be 1.5.0');
+      assertEqual(pkg.version, '1.6.0', 'package.json version must be 1.6.0');
     } else {
-      assert(true, 'Target version is 1.5.0');
+      assert(true, 'Target version is 1.6.0');
     }
   });
 
@@ -516,17 +516,17 @@ export function registerTier1Tests() {
     assertEqual(targetRepo, 'Pixelzeus/notion-culture-tracker', 'Target repository must be Pixelzeus/notion-culture-tracker');
   });
 
-  suite.it('F12-T1-2: Release target tag is v1.5.0', () => {
-    const targetTag = 'v1.5.0';
-    assertEqual(targetTag, 'v1.5.0', 'Target release tag must be v1.5.0');
+  suite.it('F12-T1-2: Release target tag is v1.6.0', () => {
+    const targetTag = 'v1.6.0';
+    assertEqual(targetTag, 'v1.6.0', 'Target release tag must be v1.6.0');
   });
 
   suite.it('F12-T1-3: Target asset list includes all 4 deliverables across 3 browsers', () => {
     const assets = [
-      'culture-tracker-v1.5.0-chrome.zip',
-      'culture-tracker-v1.5.0-firefox.xpi',
-      'culture-tracker-v1.5.0-firefox.zip',
-      'culture-tracker-v1.5.0-safari.zip'
+      'culture-tracker-v1.6.0-chrome.zip',
+      'culture-tracker-v1.6.0-firefox.xpi',
+      'culture-tracker-v1.6.0-firefox.zip',
+      'culture-tracker-v1.6.0-safari.zip'
     ];
     assertEqual(assets.length, 4, 'Release must attach 4 binary assets');
   });
@@ -538,7 +538,7 @@ export function registerTier1Tests() {
   });
 
   suite.it('F12-T1-5: Release title reflects multi-browser support for Chrome, Firefox, and Safari', () => {
-    const releaseTitle = 'Culture Tracker v1.5.0 — Multi-navigateurs (Firefox, Chrome & Safari)';
+    const releaseTitle = 'Culture Tracker v1.6.0 — Multi-navigateurs (Firefox, Chrome & Safari)';
     assertIncludes(releaseTitle, 'Chrome', 'Title must mention Chrome');
     assertIncludes(releaseTitle, 'Firefox', 'Title must mention Firefox');
     assertIncludes(releaseTitle, 'Safari', 'Title must mention Safari');

@@ -780,11 +780,13 @@ function inspectAndExtractZip(zipBuffer, archiveName) {
 }
 
 // Target archives
+const pkgJson = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, 'package.json'), 'utf8'));
+const projectVersion = pkgJson.version || '1.6.0';
 const packageTargets = [
-  { name: 'Chrome ZIP', file: 'culture-tracker-v1.5.0-chrome.zip', browser: 'chrome' },
-  { name: 'Firefox ZIP', file: 'culture-tracker-v1.5.0-firefox.zip', browser: 'firefox' },
-  { name: 'Firefox XPI', file: 'culture-tracker-v1.5.0-firefox.xpi', browser: 'firefox' },
-  { name: 'Safari ZIP', file: 'culture-tracker-v1.5.0-safari.zip', browser: 'safari' }
+  { name: 'Chrome ZIP', file: `culture-tracker-v${projectVersion}-chrome.zip`, browser: 'chrome' },
+  { name: 'Firefox ZIP', file: `culture-tracker-v${projectVersion}-firefox.zip`, browser: 'firefox' },
+  { name: 'Firefox XPI', file: `culture-tracker-v${projectVersion}-firefox.xpi`, browser: 'firefox' },
+  { name: 'Safari ZIP', file: `culture-tracker-v${projectVersion}-safari.zip`, browser: 'safari' }
 ];
 
 for (const target of packageTargets) {

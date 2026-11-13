@@ -1,13 +1,13 @@
 # 🍿 Culture Tracker — Extension Multi-Navigateurs pour Notion
 
-[![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)](https://github.com/Pixelzeus/notion-culture-tracker/releases/tag/v1.5.0)
-[![Chrome MV3](https://img.shields.io/badge/Chrome-MV3%20Ready-green.svg?logo=googlechrome)](https://github.com/Pixelzeus/notion-culture-tracker/releases/download/v1.5.0/culture-tracker-v1.5.0-chrome.zip)
-[![Firefox MV3](https://img.shields.io/badge/Firefox-MV3%20Ready-orange.svg?logo=firefoxbrowser)](https://github.com/Pixelzeus/notion-culture-tracker/releases/download/v1.5.0/culture-tracker-v1.5.0-firefox.xpi)
-[![Safari MV3](https://img.shields.io/badge/Safari-MV3%20Ready-blue.svg?logo=safari)](https://github.com/Pixelzeus/notion-culture-tracker/releases/download/v1.5.0/culture-tracker-v1.5.0-safari.zip)
+[![Version](https://img.shields.io/badge/version-1.6.0-blue.svg)](https://github.com/Pixelzeus/notion-culture-tracker/releases/tag/v1.6.0)
+[![Chrome MV3](https://img.shields.io/badge/Chrome-MV3%20Ready-green.svg?logo=googlechrome)](https://github.com/Pixelzeus/notion-culture-tracker/releases/download/v1.6.0/culture-tracker-v1.6.0-chrome.zip)
+[![Firefox MV3](https://img.shields.io/badge/Firefox-MV3%20Ready-orange.svg?logo=firefoxbrowser)](https://github.com/Pixelzeus/notion-culture-tracker/releases/download/v1.6.0/culture-tracker-v1.6.0-firefox.xpi)
+[![Safari MV3](https://img.shields.io/badge/Safari-MV3%20Ready-blue.svg?logo=safari)](https://github.com/Pixelzeus/notion-culture-tracker/releases/download/v1.6.0/culture-tracker-v1.6.0-safari.zip)
 [![Notion API](https://img.shields.io/badge/Notion-API%20v1-black.svg?logo=notion)](https://developers.notion.com/)
 [![License](https://img.shields.io/badge/license-MIT-yellow.svg)](./LICENSE)
 
-Extension web multi-navigateurs conçue pour enrichir et automatiser votre tableau de bord **Tracking Culture** dans Notion. Compatible nativement avec **Google Chrome**, **Mozilla Firefox** et **Apple Safari** en **Manifest V3**, et optimisée pour les écrans tactiles mobiles et tablettes.
+Extension web multi-navigateurs conçue pour enrichir et automatiser votre tableau de bord **Tracking Culture** dans Notion. Compatible nativement avec **Google Chrome**, **Mozilla Firefox / Zen Browser** et **Apple Safari** en **Manifest V3**, et optimisée pour les écrans tactiles mobiles et tablettes.
 
 Elle permet de rechercher instantanément n'importe quel **film**, **série** (via **TMDb**) ou **jeu vidéo** (via **TheGamesDB** et **Steam**) et de l'importer en 1 clic avec ses métadonnées complètes, ses jaquettes officielles et des **modèles de page Notion pré-remplis**.
 
@@ -15,16 +15,16 @@ L'extension fonctionne aussi bien en **popup classique** qu'en **panneau latéra
 
 ---
 
-## 📦 Téléchargements Directs (GitHub Releases v1.5.0)
+## 📦 Téléchargements Directs (GitHub Releases v1.6.0)
 
-Téléchargez le paquet correspondant à votre navigateur depuis la [Release GitHub v1.5.0](https://github.com/Pixelzeus/notion-culture-tracker/releases/tag/v1.5.0) :
+Téléchargez le paquet correspondant à votre navigateur depuis la [Release GitHub v1.6.0](https://github.com/Pixelzeus/notion-culture-tracker/releases/tag/v1.6.0) :
 
 | Navigateur / Plateforme | Type d'archive | Lien de Téléchargement Direct |
 |---|---|---|
-| 🌐 **Google Chrome & Chromium** (Edge, Brave, Opera, Vivaldi) | Archive ZIP (Manifest V3 avec Service Worker) | [📥 `culture-tracker-v1.5.0-chrome.zip`](https://github.com/Pixelzeus/notion-culture-tracker/releases/download/v1.5.0/culture-tracker-v1.5.0-chrome.zip) |
-| 🦊 **Mozilla Firefox** | Fichier XPI (Installation directe d'Add-on) | [📥 `culture-tracker-v1.5.0-firefox.xpi`](https://github.com/Pixelzeus/notion-culture-tracker/releases/download/v1.5.0/culture-tracker-v1.5.0-firefox.xpi) |
-| 🦊 **Mozilla Firefox** | Archive ZIP (Manifest V3 avec Event Script) | [📥 `culture-tracker-v1.5.0-firefox.zip`](https://github.com/Pixelzeus/notion-culture-tracker/releases/download/v1.5.0/culture-tracker-v1.5.0-firefox.zip) |
-| 🧭 **Apple Safari** (macOS, iPadOS & iOS) | Archive ZIP WebExtension standard | [📥 `culture-tracker-v1.5.0-safari.zip`](https://github.com/Pixelzeus/notion-culture-tracker/releases/download/v1.5.0/culture-tracker-v1.5.0-safari.zip) |
+| 🌐 **Google Chrome & Chromium** (Edge, Brave, Opera, Vivaldi) | Archive ZIP (Manifest V3 avec Service Worker) | [📥 `culture-tracker-v1.6.0-chrome.zip`](https://github.com/Pixelzeus/notion-culture-tracker/releases/download/v1.6.0/culture-tracker-v1.6.0-chrome.zip) |
+| 🦊 **Mozilla Firefox & Zen Browser** | Fichier XPI (Installation d'Add-on) | [📥 `culture-tracker-v1.6.0-firefox.xpi`](https://github.com/Pixelzeus/notion-culture-tracker/releases/download/v1.6.0/culture-tracker-v1.6.0-firefox.xpi) |
+| 🦊 **Mozilla Firefox & Zen Browser** | Archive ZIP (Manifest V3 avec Event Script) | [📥 `culture-tracker-v1.6.0-firefox.zip`](https://github.com/Pixelzeus/notion-culture-tracker/releases/download/v1.6.0/culture-tracker-v1.6.0-firefox.zip) |
+| 🧭 **Apple Safari** (macOS, iPadOS & iOS) | Archive ZIP WebExtension standard | [📥 `culture-tracker-v1.6.0-safari.zip`](https://github.com/Pixelzeus/notion-culture-tracker/releases/download/v1.6.0/culture-tracker-v1.6.0-safari.zip) |
 
 ---
 
@@ -54,7 +54,7 @@ Téléchargez le paquet correspondant à votre navigateur depuis la [Release Git
 
 ### 2. Installation sur Google Chrome & Navigateurs Chromium
 
-1. Téléchargez l'archive [**`culture-tracker-v1.5.0-chrome.zip`**](https://github.com/Pixelzeus/notion-culture-tracker/releases/download/v1.5.0/culture-tracker-v1.5.0-chrome.zip).
+1. Téléchargez l'archive [**`culture-tracker-v1.6.0-chrome.zip`**](https://github.com/Pixelzeus/notion-culture-tracker/releases/download/v1.6.0/culture-tracker-v1.6.0-chrome.zip).
 2. Décompressez l'archive ZIP dans un dossier dédié sur votre disque (par exemple `Documents/CultureTracker-Chrome`).
 3. Ouvrez Chrome et accédez à la page des extensions via la barre d'adresse :
    ```text
@@ -69,31 +69,36 @@ Téléchargez le paquet correspondant à votre navigateur depuis la [Release Git
 
 ---
 
-### 3. Installation sur Mozilla Firefox
+### 3. Installation sur Mozilla Firefox & Zen Browser
 
-#### Option A : Fichier XPI (Recommandé)
-1. Téléchargez le fichier [**`culture-tracker-v1.5.0-firefox.xpi`**](https://github.com/Pixelzeus/notion-culture-tracker/releases/download/v1.5.0/culture-tracker-v1.5.0-firefox.xpi).
-2. Ouvrez Firefox et entrez l'adresse suivante :
+#### Option A : Fichier XPI ou ZIP via `about:debugging` (Recommandé)
+1. Téléchargez le fichier [**`culture-tracker-v1.6.0-firefox.xpi`**](https://github.com/Pixelzeus/notion-culture-tracker/releases/download/v1.6.0/culture-tracker-v1.6.0-firefox.xpi) ou [**`culture-tracker-v1.6.0-firefox.zip`**](https://github.com/Pixelzeus/notion-culture-tracker/releases/download/v1.6.0/culture-tracker-v1.6.0-firefox.zip).
+2. Ouvrez Firefox ou Zen Browser et entrez l'adresse suivante :
    ```text
    about:debugging#/runtime/this-firefox
    ```
-3. Dans la section **Ce Firefox** (*This Firefox*), cliquez sur le bouton **« Charger un module temporaire... »** (*Load Temporary Add-on*).
-4. Sélectionnez le fichier `.xpi` téléchargé.
-5. L'extension s'active immédiatement dans votre barre d'outils !
+3. Dans la section **Ce Firefox / Ce Zen** (*This Firefox*), cliquez sur le bouton **« Charger un module temporaire... »** (*Load Temporary Add-on*).
+4. Sélectionnez le fichier `.xpi` téléchargé (ou le fichier `manifest.json` extrait de l'archive zip).
+5. L'extension s'active immédiatement dans votre navigateur, sans aucun blocage !
 
-#### Option B : Archive ZIP décompressée
-1. Téléchargez et décompressez [**`culture-tracker-v1.5.0-firefox.zip`**](https://github.com/Pixelzeus/notion-culture-tracker/releases/download/v1.5.0/culture-tracker-v1.5.0-firefox.zip).
-2. Rendez-vous sur `about:debugging#/runtime/this-firefox`.
-3. Cliquez sur **« Charger un module temporaire... »** et sélectionnez le fichier `manifest.json` à la racine du dossier décompressé.
-
-> ⚠️ **Remarque sur Firefox** : Sur les versions standard de Firefox, les modules non signés chargés via `about:debugging` restent actifs jusqu'à la fermeture du navigateur. Pour une installation permanente sans signature Mozilla AMO, utilisez **Firefox Developer Edition** ou **Firefox Nightly** avec le paramètre `xpinstall.signatures.required = false` dans `about:config`.
+#### Option B : Installation permanente sans AMO (Zen Browser / Firefox Dev Edition)
+1. Dans la barre d'adresse de Zen Browser ou Firefox Developer Edition, tapez :
+   ```text
+   about:config
+   ```
+2. Recherchez la clé suivante :
+   ```text
+   xpinstall.signatures.required
+   ```
+3. Double-cliquez dessus pour passer sa valeur à **`false`**.
+4. Glissez-déposez ensuite le fichier `culture-tracker-v1.6.0-firefox.xpi` directement dans la fenêtre du navigateur pour l'installer de manière permanente.
 
 ---
 
 ### 4. Installation sur Apple Safari (macOS & iPadOS)
 
 #### Option A : Mode Développeur Safari (Direct, sans Xcode)
-1. Téléchargez et décompressez l'archive [**`culture-tracker-v1.5.0-safari.zip`**](https://github.com/Pixelzeus/notion-culture-tracker/releases/download/v1.5.0/culture-tracker-v1.5.0-safari.zip).
+1. Téléchargez et décompressez l'archive [**`culture-tracker-v1.6.0-safari.zip`**](https://github.com/Pixelzeus/notion-culture-tracker/releases/download/v1.6.0/culture-tracker-v1.6.0-safari.zip).
 2. Ouvrez **Safari** sur votre Mac.
 3. Dans la barre de menus, allez dans **Safari** > **Réglages** (ou *Préférences*), onglet **Avancé**.
 4. Cochez l'option **« Afficher les fonctionnalités pour les développeurs web »** (ou *Afficher le menu Développement*).
@@ -103,10 +108,10 @@ Téléchargez le paquet correspondant à votre navigateur depuis la [Release Git
 
 #### Option B : Conversion en Application Native macOS / iOS via Xcode
 Si vous souhaitez compiler l'extension sous la forme d'une application macOS/iOS autonome signée avec votre compte Apple Developer :
-1. Décompressez `culture-tracker-v1.5.0-safari.zip`.
+1. Décompressez `culture-tracker-v1.6.0-safari.zip`.
 2. Ouvrez un terminal et exécutez l'utilitaire Apple Xcode :
    ```bash
-   xcrun safari-web-extension-converter path/to/culture-tracker-v1.5.0-safari --app-name "Culture Tracker"
+   xcrun safari-web-extension-converter path/to/culture-tracker-v1.6.0-safari --app-name "Culture Tracker"
    ```
 3. Xcode ouvre automatiquement le projet généré.
 4. Sélectionnez votre cible (Mac ou iPad/iPhone), choisissez votre équipe de signature et cliquez sur **Run (⌘ + R)**.
