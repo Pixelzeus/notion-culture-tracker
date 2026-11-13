@@ -8,15 +8,120 @@ const NOTION_API_URL = 'https://api.notion.com/v1';
 const NOTION_VERSION = '2022-06-28';
 
 /**
- * Nettoie et formate un ID de base Notion (avec ou sans tirets)
+ * Nettoie et formate un ID de base Notion (avec ou sans tirets, URL complète ou query params)
+ * Extrait les 32 caractères hexadécimaux et retourne le format UUID standard 8-4-4-4-12.
+ * @param {string} rawId ID brut ou URL Notion
+ * @returns {string} UUID formaté 8-4-4-4-12 ou chaîne nettoyée
  */
 export function formatDatabaseId(rawId) {
   if (!rawId) return '';
-  const clean = String(rawId).trim().replace(/-/g, '');
-  if (clean.length === 32) {
+  let str = String(rawId).trim();
+  if (!str) return '';
+
+  // 1. Supprime les query parameters (?v=...) et les ancres (#...)
+  str = str.split(/[?#]/)[0].trim();
+
+  // 2. Si c'est une URL ou un chemin, on isole le dernier segment
+  if (str.includes('/')) {
+    const segments = str.split('/').filter(Boolean);
+    str = segments.length > 0 ? segments[segments.length - 1] : str;
+  }
+
+  // 3. Cas UUID standard 8-4-4-4-12 (36 chars avec tirets)
+  const uuidMatch = str.match(/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/);
+  if (uuidMatch) {
+    const clean = uuidMatch[1].replace(/-/g, '').toLowerCase();
     return `${clean.slice(0, 8)}-${clean.slice(8, 12)}-${clean.slice(12, 16)}-${clean.slice(16, 20)}-${clean.slice(20)}`;
   }
-  return rawId.trim();
+
+  // 4. Cas 32 caractères hexadécimaux consécutifs (ex: fin de slug ou chaîne brute)
+  const hex32Matches = str.match(/([0-9a-fA-F]{32})/g);
+  if (hex32Matches && hex32Matches.length > 0) {
+    const clean = hex32Matches[hex32Matches.length - 1].toLowerCase();
+    return `${clean.slice(0, 8)}-${clean.slice(8, 12)}-${clean.slice(12, 16)}-${clean.slice(16, 20)}-${clean.slice(20)}`;
+  }
+
+  // 5. Cas où des tirets existent : on retire les tirets et vérifie si 32 hex
+  const cleanHex = str.replace(/-/g, '');
+  if (cleanHex.length === 32 && /^[0-9a-fA-F]{32}$/.test(cleanHex)) {
+    const clean = cleanHex.toLowerCase();
+    return `${clean.slice(0, 8)}-${clean.slice(8, 12)}-${clean.slice(12, 16)}-${clean.slice(16, 20)}-${clean.slice(20)}`;
+  }
+
+  return str;
+}
+
+/**
+ * Interroge l'API Notion Search pour lister toutes les bases de données accessibles par l'intégration
+ * @param {string} apiKey Clé secrète Notion
+ * @param {Object} [options] Options optionnelles (ex: fetchFn pour injection de mock)
+ * @returns {Promise<Array<{ id: string, cleanId: string, title: string, icon: string|null, url: string }>>} Liste des bases découvertes
+ */
+export async function listSharedDatabases(apiKey, options = {}) {
+  if (!apiKey || !String(apiKey).trim()) {
+    throw new Error('Clé API Notion manquante.');
+  }
+
+  const fetcher = options.fetchFn || safeFetch;
+  const res = await fetcher(`${NOTION_API_URL}/search`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey.trim()}`,
+      'Notion-Version': NOTION_VERSION,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      filter: {
+        value: 'database',
+        property: 'object'
+      },
+      page_size: 100
+    })
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: res.statusText }));
+    throw new Error(`Échec de la recherche Notion (${res.status}): ${err.message || 'Impossible de lister les bases de données.'}`);
+  }
+
+  const data = await res.json().catch(() => ({ results: [] }));
+  const results = Array.isArray(data?.results) ? data.results : [];
+
+  return results
+    .filter(item => !item.object || item.object === 'database')
+    .map(item => {
+      let icon = null;
+      if (item.icon) {
+        if (typeof item.icon === 'string') {
+          icon = item.icon;
+        } else if (item.icon.type === 'emoji') {
+          icon = item.icon.emoji || null;
+        } else if (item.icon.type === 'external') {
+          icon = item.icon.external?.url || null;
+        } else if (item.icon.type === 'file') {
+          icon = item.icon.file?.url || null;
+        } else if (item.icon.emoji) {
+          icon = item.icon.emoji;
+        } else if (item.icon.url) {
+          icon = item.icon.url;
+        }
+      }
+
+      let plainTextTitle = '';
+      if (Array.isArray(item.title) && item.title.length > 0) {
+        plainTextTitle = item.title.map(t => t.plain_text || t.text?.content || '').join('').trim();
+      } else if (typeof item.title === 'string' && item.title.trim()) {
+        plainTextTitle = item.title.trim();
+      }
+
+      return {
+        id: item.id,
+        cleanId: formatDatabaseId(item.id),
+        title: plainTextTitle || 'Base sans titre',
+        icon,
+        url: item.url || (item.id ? `https://www.notion.so/${formatDatabaseId(item.id).replace(/-/g, '')}` : '')
+      };
+    });
 }
 
 /**

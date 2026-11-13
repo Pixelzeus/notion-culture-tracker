@@ -1,7 +1,7 @@
 // Tests unitaires pour l'adaptateur de propriétés et le moteur de templates
 import { normalizeKey, resolveLookupId, buildNotionProperties } from '../services/notion-adapter.js';
 import { renderTemplateBlocks, BUILTIN_TEMPLATES, NotionBlocks, resolveVariables, compileDeclarativeBlocks, DECLARATIVE_PRESETS } from '../services/template-engine.js';
-import { generateSchemaRecommendation, evaluatePropertyCompatibility, runDryRunDiagnostic } from '../services/schema-discovery.js';
+import { generateSchemaRecommendation, evaluatePropertyCompatibility, runDryRunDiagnostic, formatDatabaseId, listSharedDatabases } from '../services/schema-discovery.js';
 import { DEFAULT_SCHEMA, validateSchema, PERMITTED_NOTION_TYPES } from '../services/schema.default.js';
 
 let passed = 0;
@@ -548,6 +548,167 @@ assert(restoredSchema.mediaTypes.movie.properties.customColumn === undefined, 'F
 assert(restoredSchema.mediaTypes.game !== undefined, 'Factory reset restaure les médias manquants');
 assert(restoredSchema.mediaTypes.movie.properties.title.notionName === 'Title', 'Factory reset restaure le mapping par défaut');
 assert(validateSchema(restoredSchema).valid === true, 'Le schéma issu du factory reset est 100% valide');
+
+console.log('\n🧪 12. Tests formatDatabaseId (Notion URL & ID Parsing)');
+
+// 12.1: String with query parameters
+assert(
+  formatDatabaseId('e62d1861c71282cc94db810409d6efa3?v=0') === 'e62d1861-c712-82cc-94db-810409d6efa3',
+  'formatDatabaseId extrait 32 hex depuis un ID avec ?v=0'
+);
+assert(
+  formatDatabaseId('e62d1861c71282cc94db810409d6efa3?v') === 'e62d1861-c712-82cc-94db-810409d6efa3',
+  'formatDatabaseId extrait 32 hex depuis un ID avec ?v sans valeur'
+);
+assert(
+  formatDatabaseId('e62d1861c71282cc94db810409d6efa3?v=abc&p=1') === 'e62d1861-c712-82cc-94db-810409d6efa3',
+  'formatDatabaseId extrait 32 hex avec plusieurs paramètres d\'URL'
+);
+
+// 12.2: Full Notion URLs with titles
+assert(
+  formatDatabaseId('https://www.notion.so/workspace/All-Movies-e62d1861c71282cc94db810409d6efa3?v=0') === 'e62d1861-c712-82cc-94db-810409d6efa3',
+  'formatDatabaseId extrait 32 hex depuis URL Notion complète avec titre et vue ?v=0'
+);
+assert(
+  formatDatabaseId('https://notion.so/myworkspace/All-TV-Shows-5f5d1861c71282f6b21f0197b7b4218e') === '5f5d1861-c712-82f6-b21f-0197b7b4218e',
+  'formatDatabaseId extrait 32 hex depuis URL Notion avec titre sans query param'
+);
+assert(
+  formatDatabaseId('https://www.notion.so/workspace/TBP-All-Games-ad5d1861c712833ba440010510e0dfb2?v=123#some-view') === 'ad5d1861-c712-833b-a440-010510e0dfb2',
+  'formatDatabaseId extrait 32 hex depuis URL avec query string et ancre hash'
+);
+assert(
+  formatDatabaseId('https://notion.so/e62d1861c71282cc94db810409d6efa3/') === 'e62d1861-c712-82cc-94db-810409d6efa3',
+  'formatDatabaseId gère un slash final dans l\'URL Notion'
+);
+
+// 12.3: Hyphenated and raw 32-char hex IDs
+assert(
+  formatDatabaseId('e62d1861-c712-82cc-94db-810409d6efa3') === 'e62d1861-c712-82cc-94db-810409d6efa3',
+  'formatDatabaseId préserve un ID UUID déjà tireté'
+);
+assert(
+  formatDatabaseId('e62d1861c71282cc94db810409d6efa3') === 'e62d1861-c712-82cc-94db-810409d6efa3',
+  'formatDatabaseId formate un ID brut 32 caractères hexadécimaux en UUID'
+);
+assert(
+  formatDatabaseId('E62D1861C71282CC94DB810409D6EFA3') === 'e62d1861-c712-82cc-94db-810409d6efa3',
+  'formatDatabaseId normalise les caractères majuscules en minuscules'
+);
+assert(
+  formatDatabaseId('   e62d1861c71282cc94db810409d6efa3?v=0   ') === 'e62d1861-c712-82cc-94db-810409d6efa3',
+  'formatDatabaseId nettoie les espaces avant et après'
+);
+
+// 12.4: Falsy and invalid inputs
+assert(formatDatabaseId('') === '', 'formatDatabaseId renvoie chaîne vide pour ""');
+assert(formatDatabaseId(null) === '', 'formatDatabaseId renvoie chaîne vide pour null');
+assert(formatDatabaseId(undefined) === '', 'formatDatabaseId renvoie chaîne vide pour undefined');
+
+console.log('\n🧪 13. Tests listSharedDatabases (Notion Search API)');
+
+// 13.1: Rejet si apiKey manquante
+let apiKeyEmptyCaught = false;
+try {
+  await listSharedDatabases('');
+} catch (e) {
+  apiKeyEmptyCaught = true;
+  assert(e.message.includes('Clé API Notion manquante'), 'listSharedDatabases lève une erreur si clé manquante');
+}
+assert(apiKeyEmptyCaught, 'listSharedDatabases rejette sans clé API');
+
+// 13.2: Découverte de bases avec mock fetch (fetchFn)
+let capturedHeaders = null;
+let capturedBody = null;
+
+const mockFetchFn = async (url, options) => {
+  if (url.includes('/search')) {
+    capturedHeaders = options.headers;
+    capturedBody = JSON.parse(options.body);
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        object: 'list',
+        results: [
+          {
+            object: 'database',
+            id: 'e62d1861-c712-82cc-94db-810409d6efa3',
+            title: [{ type: 'text', plain_text: 'All Movies' }],
+            icon: { type: 'emoji', emoji: '🎬' },
+            url: 'https://www.notion.so/e62d1861c71282cc94db810409d6efa3'
+          },
+          {
+            object: 'database',
+            id: '5f5d1861c71282f6b21f0197b7b4218e',
+            title: [{ type: 'text', plain_text: 'All TV Shows' }],
+            icon: { type: 'external', external: { url: 'https://example.com/tv.png' } },
+            url: 'https://www.notion.so/5f5d1861c71282f6b21f0197b7b4218e'
+          },
+          {
+            object: 'database',
+            id: 'ad5d1861c712833ba440010510e0dfb2',
+            title: [],
+            icon: null,
+            url: 'https://www.notion.so/ad5d1861c712833ba440010510e0dfb2'
+          },
+          {
+            object: 'page',
+            id: '99999999c712833ba440010510e0dfb2',
+            title: [{ plain_text: 'Une Page Ordinaire' }]
+          }
+        ]
+      })
+    };
+  }
+  return { ok: false, status: 404, json: async () => ({}) };
+};
+
+const discovered = await listSharedDatabases('secret_notion_key_xyz', { fetchFn: mockFetchFn });
+assert(Array.isArray(discovered), 'listSharedDatabases retourne un tableau');
+assert(discovered.length === 3, 'Exclut les objets non-database du résultat (3 bases)');
+
+// Base 1 (Movies)
+assert(discovered[0].id === 'e62d1861-c712-82cc-94db-810409d6efa3', 'Base 1 ID conservé');
+assert(discovered[0].cleanId === 'e62d1861-c712-82cc-94db-810409d6efa3', 'Base 1 cleanId UUID 8-4-4-4-12');
+assert(discovered[0].title === 'All Movies', 'Base 1 titre extrait');
+assert(discovered[0].icon === '🎬', 'Base 1 icône emoji extraite');
+assert(discovered[0].url === 'https://www.notion.so/e62d1861c71282cc94db810409d6efa3', 'Base 1 URL extraite');
+
+// Base 2 (TV Shows avec cleanId issu de raw 32 hex & icône external)
+assert(discovered[1].cleanId === '5f5d1861-c712-82f6-b21f-0197b7b4218e', 'Base 2 cleanId converti en UUID standard');
+assert(discovered[1].title === 'All TV Shows', 'Base 2 titre extrait');
+assert(discovered[1].icon === 'https://example.com/tv.png', 'Base 2 icône external url extraite');
+
+// Base 3 (Titre vide et icône nulle)
+assert(discovered[2].cleanId === 'ad5d1861-c712-833b-a440-010510e0dfb2', 'Base 3 cleanId conforme');
+assert(discovered[2].title === 'Base sans titre', 'Base 3 repli sur Base sans titre');
+assert(discovered[2].icon === null, 'Base 3 icône null gérée sans crash');
+
+// Vérification de la requête Notion API
+assert(capturedHeaders['Authorization'] === 'Bearer secret_notion_key_xyz', 'Requête Authorization Bearer valide');
+assert(capturedHeaders['Notion-Version'] === '2022-06-28', 'Version Notion API 2022-06-28 conforme');
+assert(capturedBody?.filter?.value === 'database', 'Filtre Notion search database configuré');
+assert(capturedBody?.filter?.property === 'object', 'Propriété de filtre Notion search object configurée');
+assert(capturedBody?.page_size === 100, 'Page size 100 configurée');
+
+// 13.3: Gestion des erreurs API Notion (ex: 401 Unauthorized)
+const mockErrorFetchFn = async () => ({
+  ok: false,
+  status: 401,
+  statusText: 'Unauthorized',
+  json: async () => ({ message: 'API token is invalid.' })
+});
+
+let error401Caught = false;
+try {
+  await listSharedDatabases('secret_invalid', { fetchFn: mockErrorFetchFn });
+} catch (e) {
+  error401Caught = true;
+  assert(e.message.includes('401') && e.message.includes('API token is invalid'), 'listSharedDatabases propage le message d\'erreur Notion');
+}
+assert(error401Caught, 'listSharedDatabases lève une exception sur réponse non-ok');
 
 console.log(`\n========================================`);
 console.log(`RÉSULTAT GLOBAL: ${passed} PASSÉS, ${failed} ÉCHECS`);

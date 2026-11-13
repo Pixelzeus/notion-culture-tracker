@@ -3,7 +3,7 @@
 import { browserAPI } from '../services/browser-adapter.js';
 import { getConfig, saveConfig, DEFAULT_CONFIG } from '../services/config.js';
 import { DEFAULT_SCHEMA, validateSchema } from '../services/schema.default.js';
-import { inspectDatabase, generateSchemaRecommendation, formatDatabaseId, runDryRunDiagnostic } from '../services/schema-discovery.js';
+import { inspectDatabase, generateSchemaRecommendation, formatDatabaseId, runDryRunDiagnostic, listSharedDatabases } from '../services/schema-discovery.js';
 import { DECLARATIVE_PRESETS, resolveVariables } from '../services/template-engine.js';
 
 // Schema logical fields definition per media type
@@ -52,6 +52,7 @@ const state = {
   activeTab: 'tabSchemas',
   activeMediaSubtab: 'movie',
   discoveredDbs: {}, // [dbId]: inspectDatabase result
+  detectedSharedDbs: [], // array of { id, cleanId, title, icon, url } from listSharedDatabases
   isDirty: false,
   // Milestone 2: Template Builder State
   activeTemplateMedia: 'movie',
@@ -93,6 +94,30 @@ function cacheDomElements() {
   dom.modeCardDistinct = document.getElementById('modeCardDistinct');
   dom.modeCardUnified = document.getElementById('modeCardUnified');
   dom.unifiedDbConfigCard = document.getElementById('unifiedDbConfigCard');
+
+  // Quick Setup / Auto-Detection
+  dom.btnAutoDetectAllDatabases = document.getElementById('btnAutoDetectAllDatabases');
+  dom.autoDetectSummary = document.getElementById('autoDetectSummary');
+
+  // Dual-mode database dropdowns, badges & status chips
+  dom.dbSelects = {
+    movie: document.getElementById('dbSelect_movie'),
+    tv: document.getElementById('dbSelect_tv'),
+    game: document.getElementById('dbSelect_game'),
+    unified: document.getElementById('dbSelect_unified')
+  };
+  dom.dbDetectedBadges = {
+    movie: document.getElementById('dbDetectedBadge_movie'),
+    tv: document.getElementById('dbDetectedBadge_tv'),
+    game: document.getElementById('dbDetectedBadge_game'),
+    unified: document.getElementById('dbDetectedBadge_unified')
+  };
+  dom.statusChips = {
+    movie: document.getElementById('statusChip_movie'),
+    tv: document.getElementById('statusChip_tv'),
+    game: document.getElementById('statusChip_game'),
+    unified: document.getElementById('statusChip_unified')
+  };
 
   // Unified mode inputs
   dom.unifiedDbIdInput = document.getElementById('unifiedDbIdInput');
@@ -201,6 +226,53 @@ function setupEventListeners() {
   if (dom.modeCardUnified) {
     dom.modeCardUnified.addEventListener('click', () => setDatabaseMode('unified'));
   }
+
+  // Quick Setup: Auto-Detect All Databases
+  if (dom.btnAutoDetectAllDatabases) {
+    dom.btnAutoDetectAllDatabases.addEventListener('click', () => handleAutoDetectAllDatabases());
+  }
+
+  // Dual-Mode Database Dropdowns Selection Handlers
+  ['movie', 'tv', 'game'].forEach(media => {
+    const select = dom.dbSelects?.[media];
+    if (select) {
+      select.addEventListener('change', async (e) => {
+        const val = e.target.value;
+        if (val) {
+          if (dom.dbInputs[media]) {
+            dom.dbInputs[media].value = val;
+          }
+          if (dom.dbDetectedBadges?.[media]) {
+            dom.dbDetectedBadges[media].style.display = 'inline-flex';
+          }
+          await handleInspectDistinctDatabase(media);
+          markDirty();
+        }
+      });
+    }
+  });
+
+  if (dom.dbSelects?.unified) {
+    dom.dbSelects.unified.addEventListener('change', async (e) => {
+      const val = e.target.value;
+      if (val) {
+        if (dom.unifiedDbIdInput) {
+          dom.unifiedDbIdInput.value = val;
+        }
+        if (dom.dbDetectedBadges?.unified) {
+          dom.dbDetectedBadges.unified.style.display = 'inline-flex';
+        }
+        await handleInspectUnifiedDatabase();
+        markDirty();
+      }
+    });
+  }
+
+  // Real-Time Database ID Sanitization & Cleaning on Input/Paste
+  ['movie', 'tv', 'game'].forEach(media => {
+    attachDatabaseIdCleaner(dom.dbInputs[media], media);
+  });
+  attachDatabaseIdCleaner(dom.unifiedDbIdInput, 'unified');
 
   // Auto-Discovery: Unified Database
   if (dom.btnInspectUnifiedDb) {
@@ -432,6 +504,20 @@ async function loadState() {
       }
     }
   });
+
+  // Load cached detected databases if available
+  try {
+    const storageDbs = await browserAPI.storage.local.get('cultureTrackerDetectedDbs');
+    if (storageDbs && Array.isArray(storageDbs.cultureTrackerDetectedDbs) && storageDbs.cultureTrackerDetectedDbs.length > 0) {
+      state.detectedSharedDbs = storageDbs.cultureTrackerDetectedDbs;
+      renderAutoDetectSummary(state.detectedSharedDbs);
+      populateDatabaseDropdowns(state.detectedSharedDbs);
+      ['movie', 'tv', 'game'].forEach(m => syncSelectWithInput(m, dom.dbInputs[m]?.value));
+      syncSelectWithInput('unified', dom.unifiedDbIdInput?.value);
+    }
+  } catch (err) {
+    console.warn('Erreur lecture bases détectées stockées:', err);
+  }
 }
 
 // UI Navigation Handlers
@@ -490,6 +576,322 @@ function renderModeSelection() {
   });
 }
 
+// ==========================================================================
+// Intelligent Auto-Discovery & Real-Time Sanitization
+// ==========================================================================
+
+/**
+ * Nettoie en temps réel les URLs et identifiants Notion saisis ou collés
+ */
+function attachDatabaseIdCleaner(inputElem, mediaType) {
+  if (!inputElem) return;
+
+  const cleanValue = () => {
+    const raw = inputElem.value;
+    if (!raw) return;
+    const cleaned = formatDatabaseId(raw);
+    if (cleaned && cleaned !== raw) {
+      inputElem.value = cleaned;
+      syncSelectWithInput(mediaType, cleaned);
+      markDirty();
+    }
+  };
+
+  inputElem.addEventListener('input', () => {
+    cleanValue();
+  });
+
+  inputElem.addEventListener('paste', (e) => {
+    const pasteData = (e.clipboardData || window.clipboardData)?.getData('text');
+    if (pasteData) {
+      const cleaned = formatDatabaseId(pasteData);
+      if (cleaned && cleaned !== pasteData) {
+        e.preventDefault();
+        inputElem.value = cleaned;
+        syncSelectWithInput(mediaType, cleaned);
+        inputElem.dispatchEvent(new Event('input', { bubbles: true }));
+        markDirty();
+        return;
+      }
+    }
+    setTimeout(cleanValue, 0);
+  });
+
+  inputElem.addEventListener('blur', () => {
+    cleanValue();
+  });
+}
+
+/**
+ * Synchronise l'état d'un select déroulant avec une valeur d'input nettoyée
+ */
+function syncSelectWithInput(mediaType, cleanId) {
+  const select = dom.dbSelects?.[mediaType];
+  const badge = dom.dbDetectedBadges?.[mediaType];
+  if (!select) return;
+
+  if (!cleanId) {
+    select.value = '';
+    if (badge) badge.style.display = 'none';
+    return;
+  }
+
+  const normalizedCleanId = formatDatabaseId(cleanId);
+  const options = Array.from(select.options);
+  const matched = options.find(opt => {
+    return opt.value && (opt.value === cleanId || opt.value === normalizedCleanId || formatDatabaseId(opt.value) === normalizedCleanId);
+  });
+
+  if (matched) {
+    select.value = matched.value;
+    if (badge) badge.style.display = 'inline-flex';
+  } else {
+    select.value = '';
+    if (badge) badge.style.display = 'none';
+  }
+}
+
+/**
+ * Affiche le résumé visuel de toutes les bases Notion détectées
+ */
+function renderAutoDetectSummary(databases) {
+  if (!dom.autoDetectSummary) return;
+
+  dom.autoDetectSummary.style.display = 'flex';
+  dom.autoDetectSummary.className = 'auto-detect-summary';
+
+  const pillsHtml = databases.map(db => {
+    const icon = db.icon || '📁';
+    const isEmoji = !icon.startsWith('http');
+    const iconHtml = isEmoji 
+      ? `<span class="db-icon">${escapeHtml(icon)}</span>`
+      : `<img class="db-icon" src="${escapeHtml(icon)}" alt="" style="width:16px;height:16px;border-radius:3px;">`;
+
+    let assignedClass = '';
+    let badgeHtml = '';
+    if (/movie|film/i.test(db.title)) {
+      assignedClass = ' assigned-movie';
+      badgeHtml = '<span class="db-badge">🎬 Film</span>';
+    } else if (/tv|show|s[eé]rie/i.test(db.title)) {
+      assignedClass = ' assigned-tv';
+      badgeHtml = '<span class="db-badge">📺 Série</span>';
+    } else if (/game|jeu/i.test(db.title)) {
+      assignedClass = ' assigned-game';
+      badgeHtml = '<span class="db-badge">🎮 Jeu</span>';
+    }
+
+    return `
+      <div class="detected-db-pill${assignedClass}" data-db-id="${escapeHtml(db.cleanId)}" title="ID: ${escapeHtml(db.cleanId)}">
+        <div class="detected-db-pill-main">
+          ${iconHtml}
+          <span class="db-title">${escapeHtml(db.title)}</span>
+        </div>
+        ${badgeHtml}
+      </div>
+    `;
+  }).join('');
+
+  dom.autoDetectSummary.innerHTML = `
+    <div class="auto-detect-summary-header">
+      <span>✨ ${databases.length} base(s) de données détectée(s) dans votre espace Notion :</span>
+    </div>
+    <div class="detected-dbs-grid">
+      ${pillsHtml}
+    </div>
+  `;
+}
+
+/**
+ * Peuple les menus déroulants pour movie, tv, game et unified avec les bases détectées
+ */
+function populateDatabaseDropdowns(databases) {
+  const mediaKeys = ['movie', 'tv', 'game', 'unified'];
+
+  mediaKeys.forEach(media => {
+    const select = dom.dbSelects?.[media];
+    if (!select) return;
+
+    const currentId = (media === 'unified' ? dom.unifiedDbIdInput?.value : dom.dbInputs[media]?.value)?.trim();
+    const currentNormalized = currentId ? formatDatabaseId(currentId) : '';
+
+    select.innerHTML = '';
+
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = media === 'unified'
+      ? '-- Sélectionnez une base Notion détectée --'
+      : `-- Sélectionnez une base pour ${media === 'movie' ? 'les Films' : media === 'tv' ? 'les Séries' : 'les Jeux'} --`;
+    select.appendChild(placeholder);
+
+    databases.forEach(db => {
+      const opt = document.createElement('option');
+      opt.value = db.cleanId;
+      const icon = db.icon && !db.icon.startsWith('http') ? `${db.icon} ` : '';
+      opt.textContent = `${icon}${db.title}`;
+      if (currentNormalized && (db.cleanId === currentNormalized || formatDatabaseId(db.id) === currentNormalized)) {
+        opt.selected = true;
+      }
+      select.appendChild(opt);
+    });
+
+    if (dom.dbDetectedBadges?.[media]) {
+      const hasMatch = select.value !== '';
+      dom.dbDetectedBadges[media].style.display = hasMatch ? 'inline-flex' : 'none';
+    }
+  });
+}
+
+/**
+ * Attribution automatique intelligente (Smart Auto-Assign)
+ * - movie: title matching /movie|film/i
+ * - tv: title matching /tv|show|s[eé]rie/i
+ * - game: title matching /game|jeu/i
+ * Met à jour les inputs, lance inspectDatabase et rend les tables de mapping automatiquement.
+ */
+async function autoAssignDatabases(databases) {
+  const isUnified = state.schema?.databaseMode === 'unified';
+
+  if (isUnified) {
+    const unifiedMatched = databases.find(db => /culture|tracker|media|collection/i.test(db.title)) || (databases.length === 1 ? databases[0] : null);
+    if (unifiedMatched) {
+      if (dom.dbSelects?.unified) {
+        dom.dbSelects.unified.value = unifiedMatched.cleanId;
+      }
+      if (dom.unifiedDbIdInput) {
+        dom.unifiedDbIdInput.value = unifiedMatched.cleanId;
+      }
+      if (dom.dbDetectedBadges?.unified) {
+        dom.dbDetectedBadges.unified.style.display = 'inline-flex';
+      }
+      await handleInspectUnifiedDatabase();
+    }
+    return;
+  }
+
+  // Distinct mode
+  const patterns = {
+    movie: /movie|film/i,
+    tv: /tv|show|s[eé]rie/i,
+    game: /game|jeu/i
+  };
+
+  const assigned = [];
+
+  for (const media of ['movie', 'tv', 'game']) {
+    const pattern = patterns[media];
+    const matched = databases.find(db => pattern.test(db.title));
+    if (matched) {
+      assigned.push({ media, db: matched });
+      if (dom.dbSelects?.[media]) {
+        dom.dbSelects[media].value = matched.cleanId;
+      }
+      if (dom.dbInputs?.[media]) {
+        dom.dbInputs[media].value = matched.cleanId;
+      }
+      if (dom.dbDetectedBadges?.[media]) {
+        dom.dbDetectedBadges[media].style.display = 'inline-flex';
+      }
+
+      if (state.schema.mediaTypes?.[media]) {
+        state.schema.mediaTypes[media].databaseId = matched.id;
+      }
+      if (media === 'movie') state.config.moviesDbId = matched.cleanId;
+      if (media === 'tv') state.config.tvShowsDbId = matched.cleanId;
+      if (media === 'game') state.config.gamesDbId = matched.cleanId;
+
+      try {
+        await handleInspectDistinctDatabase(media);
+      } catch (err) {
+        console.warn(`Erreur auto-inspection pour ${media}:`, err);
+      }
+    }
+  }
+
+  // Pre-fill unified select in background if matching
+  const unifiedMatched = databases.find(db => /culture|tracker|media|collection/i.test(db.title));
+  if (unifiedMatched && dom.dbSelects?.unified) {
+    dom.dbSelects.unified.value = unifiedMatched.cleanId;
+    if (dom.unifiedDbIdInput && !dom.unifiedDbIdInput.value) {
+      dom.unifiedDbIdInput.value = unifiedMatched.cleanId;
+    }
+  }
+
+  if (assigned.length > 0) {
+    const summaryList = assigned.map(a => `${a.media}: "${a.db.title}"`).join(', ');
+    showToast(`Bases associées et inspectées automatiquement (${assigned.length}) : ${summaryList}`, 'success');
+  }
+}
+
+/**
+ * Handler principal pour #btnAutoDetectAllDatabases
+ */
+async function handleAutoDetectAllDatabases() {
+  const apiKey = dom.notionApiKeyInput?.value?.trim();
+  if (!apiKey) {
+    showToast('Veuillez renseigner votre clé API Notion ci-dessus avant de lancer la détection.', 'error');
+    dom.notionApiKeyInput?.focus();
+    return;
+  }
+
+  const btn = dom.btnAutoDetectAllDatabases;
+  const summaryBox = dom.autoDetectSummary;
+
+  setButtonLoading(btn, true, 'Détection en cours...');
+  if (summaryBox) {
+    summaryBox.style.display = 'flex';
+    summaryBox.className = 'auto-detect-summary loading';
+    summaryBox.innerHTML = '<div class="auto-detect-summary-header"><span>⏳ Interrogation de l\'API Notion et détection des bases partagées...</span></div>';
+  }
+
+  try {
+    const databases = await listSharedDatabases(apiKey);
+    state.detectedSharedDbs = databases || [];
+
+    // Cache in local storage
+    try {
+      await browserAPI.storage.local.set({ cultureTrackerDetectedDbs: state.detectedSharedDbs });
+    } catch (e) {
+      console.warn('Erreur mise en cache detectedSharedDbs:', e);
+    }
+
+    if (!databases || databases.length === 0) {
+      if (summaryBox) {
+        summaryBox.className = 'auto-detect-summary empty';
+        summaryBox.innerHTML = `
+          <div class="auto-detect-summary-header" style="color: var(--warning);">
+            <span>⚠️ Aucune base de données Notion trouvée.</span>
+          </div>
+          <p style="font-size: 13px; color: var(--text-secondary); margin: 4px 0 0;">
+            Assurez-vous d'avoir partagé vos bases avec votre intégration dans Notion (menu "..." en haut à droite de chaque base Notion > "Connexions" > Ajouter votre intégration).
+          </p>
+        `;
+      }
+      showToast('Aucune base Notion détectée. Vérifiez vos partages.', 'warning');
+      return;
+    }
+
+    renderAutoDetectSummary(databases);
+    populateDatabaseDropdowns(databases);
+    await autoAssignDatabases(databases);
+
+    showToast(`Détection réussie ! ${databases.length} base(s) Notion détectée(s).`, 'success');
+    markDirty();
+  } catch (err) {
+    console.error('Erreur détection automatique des bases:', err);
+    if (summaryBox) {
+      summaryBox.className = 'auto-detect-summary error';
+      summaryBox.innerHTML = `
+        <div class="auto-detect-summary-header" style="color: var(--error);">
+          <span>❌ Échec de la détection : ${escapeHtml(err.message)}</span>
+        </div>
+      `;
+    }
+    showToast(`Erreur détection : ${err.message}`, 'error');
+  } finally {
+    setButtonLoading(btn, false, '<span>🔍</span> Détecter automatiquement toutes mes bases Notion');
+  }
+}
+
 // Auto-Discovery: Inspection Handlers
 async function handleInspectDistinctDatabase(media) {
   const apiKey = dom.notionApiKeyInput.value.trim();
@@ -508,8 +910,13 @@ async function handleInspectDistinctDatabase(media) {
 
   const btn = dom.inspectBtns[media];
   const banner = dom.statusBanners[media];
+  const chip = dom.statusChips?.[media];
 
   setButtonLoading(btn, true, 'Inspection en cours...');
+  if (chip) {
+    chip.className = 'status-chip loading';
+    chip.textContent = 'Inspection...';
+  }
   banner.className = 'discovery-banner loading';
   banner.innerHTML = '<span>⏳ Connexion à l\'API Notion et inspection du schéma...</span>';
 
@@ -527,19 +934,28 @@ async function handleInspectDistinctDatabase(media) {
     const recommendation = generateSchemaRecommendation(dbMetadata, media);
     applyRecommendation(media, recommendation);
 
+    if (chip) {
+      chip.className = 'status-chip success';
+      chip.textContent = 'Connectée';
+    }
     banner.className = 'discovery-banner success';
     banner.innerHTML = `<span>✅ <strong>Base connectée :</strong> "${escapeHtml(dbMetadata.title)}" (${dbMetadata.propertiesCount} colonnes réelles détectées).</span>`;
 
+    syncSelectWithInput(media, rawId);
     renderMappingTable(media);
     markDirty();
     showToast(`Base "${dbMetadata.title}" inspectée avec succès !`, 'success');
   } catch (err) {
     console.error('Erreur inspection distinct database:', err);
+    if (chip) {
+      chip.className = 'status-chip error';
+      chip.textContent = 'Erreur';
+    }
     banner.className = 'discovery-banner error';
     banner.innerHTML = `<span>❌ <strong>Erreur :</strong> ${escapeHtml(err.message)}</span>`;
     showToast(`Échec inspection : ${err.message}`, 'error');
   } finally {
-    setButtonLoading(btn, false, '🔍 Auto-découvrir les colonnes');
+    setButtonLoading(btn, false, '<span>🔍</span> Auto-découvrir les colonnes');
   }
 }
 
@@ -560,8 +976,13 @@ async function handleInspectUnifiedDatabase() {
 
   const btn = dom.btnInspectUnifiedDb;
   const banner = dom.unifiedDbStatusBanner;
+  const chip = dom.statusChips?.unified;
 
   setButtonLoading(btn, true, 'Inspection en cours...');
+  if (chip) {
+    chip.className = 'status-chip loading';
+    chip.textContent = 'Inspection...';
+  }
   banner.className = 'discovery-banner loading';
   banner.innerHTML = '<span>⏳ Connexion à l\'API Notion et inspection de la base unifiée...</span>';
 
@@ -582,18 +1003,27 @@ async function handleInspectUnifiedDatabase() {
       renderMappingTable(media);
     });
 
+    if (chip) {
+      chip.className = 'status-chip success';
+      chip.textContent = 'Connectée';
+    }
     banner.className = 'discovery-banner success';
     banner.innerHTML = `<span>✅ <strong>Base unifiée connectée :</strong> "${escapeHtml(dbMetadata.title)}" (${dbMetadata.propertiesCount} colonnes réelles détectées).</span>`;
 
+    syncSelectWithInput('unified', rawId);
     markDirty();
     showToast(`Base unifiée "${dbMetadata.title}" inspectée avec succès !`, 'success');
   } catch (err) {
     console.error('Erreur inspection unified database:', err);
+    if (chip) {
+      chip.className = 'status-chip error';
+      chip.textContent = 'Erreur';
+    }
     banner.className = 'discovery-banner error';
     banner.innerHTML = `<span>❌ <strong>Erreur :</strong> ${escapeHtml(err.message)}</span>`;
     showToast(`Échec inspection : ${err.message}`, 'error');
   } finally {
-    setButtonLoading(btn, false, '🔍 Auto-découvrir la base unifiée');
+    setButtonLoading(btn, false, '<span>🔍</span> Auto-découvrir les colonnes');
   }
 }
 
@@ -840,6 +1270,12 @@ function renderAll() {
   ['movie', 'tv', 'game'].forEach(media => {
     renderMappingTable(media);
   });
+  if (state.detectedSharedDbs && state.detectedSharedDbs.length > 0) {
+    renderAutoDetectSummary(state.detectedSharedDbs);
+    populateDatabaseDropdowns(state.detectedSharedDbs);
+    ['movie', 'tv', 'game'].forEach(m => syncSelectWithInput(m, dom.dbInputs[m]?.value));
+    syncSelectWithInput('unified', dom.unifiedDbIdInput?.value);
+  }
   switchTemplateMedia(state.activeTemplateMedia);
 }
 
@@ -880,10 +1316,13 @@ async function handleSave() {
   // Persist cultureTrackerConfig
   const okConfig = await saveConfig(state.config);
 
-  // Persist cultureTrackerSchema
+  // Persist cultureTrackerSchema & cached detected databases
   let okSchema = false;
   try {
-    await browserAPI.storage.local.set({ cultureTrackerSchema: state.schema });
+    await browserAPI.storage.local.set({
+      cultureTrackerSchema: state.schema,
+      cultureTrackerDetectedDbs: state.detectedSharedDbs || []
+    });
     okSchema = true;
   } catch (err) {
     console.error('Erreur sauvegarde cultureTrackerSchema:', err);

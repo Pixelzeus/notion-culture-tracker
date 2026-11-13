@@ -49,6 +49,27 @@
       </div>
     </section>
 
+    <!-- Quick Setup / Auto-Detection Banner -->
+    <section class="config-card quick-detect-banner">
+      <div class="quick-detect-content">
+        <div class="quick-detect-header">
+          <div class="quick-detect-icon" aria-hidden="true">✨</div>
+          <div class="quick-detect-text">
+            <h2 class="quick-detect-title">Configuration Rapide & Détection Automatique</h2>
+            <p class="quick-detect-desc">
+              Détectez en un clic toutes les bases Notion partagées avec votre intégration. Culture Tracker peut associer automatiquement vos bases de Films, Séries et Jeux Vidéo !
+            </p>
+          </div>
+        </div>
+        <div class="quick-detect-actions">
+          <button type="button" id="btnAutoDetectAllDatabases" class="btn btn-primary btn-auto-detect">
+            <span class="btn-icon">🔍</span> Détecter automatiquement toutes mes bases Notion
+          </button>
+        </div>
+      </div>
+      <div id="autoDetectSummary" class="auto-detect-summary" style="display: none;"></div>
+    </section>
+
     <!-- Main Navigation Tabs -->
     <nav class="tabs-navigation" role="tablist">
       <button type="button" class="tab-btn active" id="tabBtnSchemas" data-tab="tabSchemas" role="tab" aria-selected="true">
@@ -110,23 +131,43 @@
           <div>
             <h2 class="card-title"><span>⚙️</span> Configuration de la Base Unifiée</h2>
             <p class="card-description">
-              Renseignez l'identifiant de votre base unique et configurez la propriété discriminante Notion (Type ou Catégorie).
+              Sélectionnez votre base unique ou renseignez son identifiant, puis configurez la propriété discriminante Notion (Type ou Catégorie).
             </p>
           </div>
         </div>
 
-        <div class="form-group">
-          <label for="unifiedDbIdInput" class="form-label">Identifiant de la Base Notion Unifiée</label>
-          <div class="input-row">
-            <input type="text" id="unifiedDbIdInput" class="form-input" placeholder="Ex: 312aec4b87d98111b530d4af0c22d898 ou URL complète Notion">
-            <button type="button" id="btnInspectUnifiedDb" class="btn btn-inspect">
-              <span>🔍</span> Auto-découvrir la base unifiée
-            </button>
+        <div class="db-select-group">
+          <div class="form-group">
+            <div class="db-label-row">
+              <label for="dbSelect_unified" class="form-label">
+                <span>⚡</span> Choisir parmi les bases détectées
+              </label>
+              <span class="db-badge-detected" id="dbDetectedBadge_unified" style="display: none;">Détectée</span>
+            </div>
+            <select id="dbSelect_unified" class="form-select db-select" data-media="unified">
+              <option value="">-- Sélectionnez une base Notion détectée --</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="unifiedDbIdInput" class="form-label">
+              <span>🔗</span> Ou saisie manuelle (Lien ou ID)
+            </label>
+            <div class="input-row">
+              <input type="text" id="unifiedDbIdInput" class="form-input" placeholder="Collez le lien Notion complet ou l'identifiant (ex: https://notion.so/...)">
+              <button type="button" id="btnInspectUnifiedDb" class="btn btn-inspect">
+                <span>🔍</span> Auto-découvrir les colonnes
+              </button>
+            </div>
+            <p class="form-hint">
+              <span>💡</span> Les paramètres de filtre ou vue comme <code>?v=...</code> et les URLs complètes sont automatiquement nettoyés.
+            </p>
           </div>
         </div>
 
         <div id="unifiedDbStatusBanner" class="discovery-banner idle">
-          <span>ℹ️ Entrez l'identifiant et cliquez sur "Auto-découvrir" pour charger les colonnes.</span>
+          <span class="status-chip idle" id="statusChip_unified">En attente</span>
+          <span>ℹ️ Sélectionnez une base ou entrez l'identifiant et cliquez sur "Auto-découvrir les colonnes" pour charger les colonnes.</span>
         </div>
 
         <div class="form-group" style="margin-top: 18px;">
@@ -183,19 +224,39 @@
         <!-- MOVIE SECTION -->
         <div id="mediaPanelMovie" class="media-panel active">
           <div class="distinct-db-controls" id="distinctControls_movie">
-            <div class="form-group">
-              <label for="dbIdInput_movie" class="form-label">Identifiant de la Base Notion "Films"</label>
-              <div class="input-row">
-                <input type="text" id="dbIdInput_movie" class="form-input" placeholder="ID ou URL Notion de la base Films...">
-                <button type="button" id="btnInspect_movie" class="btn btn-inspect" data-media="movie">
-                  <span>🔍</span> Auto-découvrir les colonnes
-                </button>
+            <div class="db-select-group">
+              <div class="form-group">
+                <div class="db-label-row">
+                  <label for="dbSelect_movie" class="form-label">
+                    <span>🎬</span> Base Notion détectée pour "Films"
+                  </label>
+                  <span class="db-badge-detected" id="dbDetectedBadge_movie" style="display: none;">Détectée</span>
+                </div>
+                <select id="dbSelect_movie" class="form-select db-select" data-media="movie">
+                  <option value="">-- Sélectionnez une base Notion détectée --</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="dbIdInput_movie" class="form-label">
+                  <span>🔗</span> Ou saisie manuelle (Lien ou ID)
+                </label>
+                <div class="input-row">
+                  <input type="text" id="dbIdInput_movie" class="form-input" placeholder="Collez le lien Notion complet ou l'identifiant (ex: https://notion.so/...)">
+                  <button type="button" id="btnInspect_movie" class="btn btn-inspect" data-media="movie">
+                    <span>🔍</span> Auto-découvrir les colonnes
+                  </button>
+                </div>
+                <p class="form-hint">
+                  <span>💡</span> Les paramètres de filtre ou vue comme <code>?v=...</code> et les URLs complètes sont automatiquement nettoyés.
+                </p>
               </div>
             </div>
           </div>
 
           <div id="statusBanner_movie" class="discovery-banner idle">
-            <span>ℹ️ Cliquez sur "Auto-découvrir" pour charger les colonnes Notion et pré-remplir le mapping.</span>
+            <span class="status-chip idle" id="statusChip_movie">En attente</span>
+            <span>ℹ️ Sélectionnez une base ou entrez l'identifiant pour charger les colonnes Notion et pré-remplir le mapping.</span>
           </div>
 
           <div class="mapping-table-wrapper">
@@ -217,19 +278,39 @@
         <!-- TV SECTION -->
         <div id="mediaPanelTv" class="media-panel" style="display: none;">
           <div class="distinct-db-controls" id="distinctControls_tv">
-            <div class="form-group">
-              <label for="dbIdInput_tv" class="form-label">Identifiant de la Base Notion "Séries TV"</label>
-              <div class="input-row">
-                <input type="text" id="dbIdInput_tv" class="form-input" placeholder="ID ou URL Notion de la base Séries TV...">
-                <button type="button" id="btnInspect_tv" class="btn btn-inspect" data-media="tv">
-                  <span>🔍</span> Auto-découvrir les colonnes
-                </button>
+            <div class="db-select-group">
+              <div class="form-group">
+                <div class="db-label-row">
+                  <label for="dbSelect_tv" class="form-label">
+                    <span>📺</span> Base Notion détectée pour "Séries TV"
+                  </label>
+                  <span class="db-badge-detected" id="dbDetectedBadge_tv" style="display: none;">Détectée</span>
+                </div>
+                <select id="dbSelect_tv" class="form-select db-select" data-media="tv">
+                  <option value="">-- Sélectionnez une base Notion détectée --</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="dbIdInput_tv" class="form-label">
+                  <span>🔗</span> Ou saisie manuelle (Lien ou ID)
+                </label>
+                <div class="input-row">
+                  <input type="text" id="dbIdInput_tv" class="form-input" placeholder="Collez le lien Notion complet ou l'identifiant (ex: https://notion.so/...)">
+                  <button type="button" id="btnInspect_tv" class="btn btn-inspect" data-media="tv">
+                    <span>🔍</span> Auto-découvrir les colonnes
+                  </button>
+                </div>
+                <p class="form-hint">
+                  <span>💡</span> Les paramètres de filtre ou vue comme <code>?v=...</code> et les URLs complètes sont automatiquement nettoyés.
+                </p>
               </div>
             </div>
           </div>
 
           <div id="statusBanner_tv" class="discovery-banner idle">
-            <span>ℹ️ Cliquez sur "Auto-découvrir" pour charger les colonnes Notion et pré-remplir le mapping.</span>
+            <span class="status-chip idle" id="statusChip_tv">En attente</span>
+            <span>ℹ️ Sélectionnez une base ou entrez l'identifiant pour charger les colonnes Notion et pré-remplir le mapping.</span>
           </div>
 
           <div class="mapping-table-wrapper">
@@ -251,19 +332,39 @@
         <!-- GAME SECTION -->
         <div id="mediaPanelGame" class="media-panel" style="display: none;">
           <div class="distinct-db-controls" id="distinctControls_game">
-            <div class="form-group">
-              <label for="dbIdInput_game" class="form-label">Identifiant de la Base Notion "Jeux Vidéo"</label>
-              <div class="input-row">
-                <input type="text" id="dbIdInput_game" class="form-input" placeholder="ID ou URL Notion de la base Jeux Vidéo...">
-                <button type="button" id="btnInspect_game" class="btn btn-inspect" data-media="game">
-                  <span>🔍</span> Auto-découvrir les colonnes
-                </button>
+            <div class="db-select-group">
+              <div class="form-group">
+                <div class="db-label-row">
+                  <label for="dbSelect_game" class="form-label">
+                    <span>🎮</span> Base Notion détectée pour "Jeux Vidéo"
+                  </label>
+                  <span class="db-badge-detected" id="dbDetectedBadge_game" style="display: none;">Détectée</span>
+                </div>
+                <select id="dbSelect_game" class="form-select db-select" data-media="game">
+                  <option value="">-- Sélectionnez une base Notion détectée --</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="dbIdInput_game" class="form-label">
+                  <span>🔗</span> Ou saisie manuelle (Lien ou ID)
+                </label>
+                <div class="input-row">
+                  <input type="text" id="dbIdInput_game" class="form-input" placeholder="Collez le lien Notion complet ou l'identifiant (ex: https://notion.so/...)">
+                  <button type="button" id="btnInspect_game" class="btn btn-inspect" data-media="game">
+                    <span>🔍</span> Auto-découvrir les colonnes
+                  </button>
+                </div>
+                <p class="form-hint">
+                  <span>💡</span> Les paramètres de filtre ou vue comme <code>?v=...</code> et les URLs complètes sont automatiquement nettoyés.
+                </p>
               </div>
             </div>
           </div>
 
           <div id="statusBanner_game" class="discovery-banner idle">
-            <span>ℹ️ Cliquez sur "Auto-découvrir" pour charger les colonnes Notion et pré-remplir le mapping.</span>
+            <span class="status-chip idle" id="statusChip_game">En attente</span>
+            <span>ℹ️ Sélectionnez une base ou entrez l'identifiant pour charger les colonnes Notion et pré-remplir le mapping.</span>
           </div>
 
           <div class="mapping-table-wrapper">
