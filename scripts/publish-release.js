@@ -256,36 +256,51 @@ export async function deleteAsset(repo, assetId, token) {
 }
 
 /**
- * Uploads a binary asset to a release.
+ * Uploads a binary asset to a release with retries and connection handling.
  * @param {string} uploadUrl e.g. https://uploads.github.com/repos/.../assets{?name,label}
  * @param {string} assetPath local path to file
  * @param {string} assetName name of file in release
  * @param {string} mimeType
  * @param {string} token
+ * @param {number} [maxRetries=3]
  * @returns {Promise<object>}
  */
-export async function uploadAsset(uploadUrl, assetPath, assetName, mimeType, token) {
+export async function uploadAsset(uploadUrl, assetPath, assetName, mimeType, token, maxRetries = 3) {
   const fileBuffer = fs.readFileSync(assetPath);
   const cleanUrl = uploadUrl.replace(/\{(\?|&)[^}]+\}/, '');
   const parsedUrl = new URL(cleanUrl);
   parsedUrl.searchParams.set('name', assetName);
 
-  const res = await githubRequest({
-    hostname: parsedUrl.hostname,
-    path: `${parsedUrl.pathname}${parsedUrl.search}`,
-    method: 'POST',
-    headers: {
-      'Authorization': `token ${token}`,
-      'Content-Type': mimeType,
-      'Content-Length': fileBuffer.length
+  let lastErr = null;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      if (attempt > 1) {
+        console.log(`   ⏳ Retrying upload (${attempt}/${maxRetries}) for ${assetName}...`);
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+
+      const res = await githubRequest({
+        hostname: parsedUrl.hostname,
+        path: `${parsedUrl.pathname}${parsedUrl.search}`,
+        method: 'POST',
+        headers: {
+          'Authorization': `token ${token}`,
+          'Content-Type': mimeType,
+          'Content-Length': fileBuffer.length,
+          'Connection': 'close'
+        }
+      }, fileBuffer);
+
+      if (res.statusCode !== 201) {
+        throw new Error(`Failed to upload asset "${assetName}": HTTP ${res.statusCode} — ${res.data}`);
+      }
+
+      return res.json;
+    } catch (err) {
+      lastErr = err;
+      if (attempt === maxRetries) throw lastErr;
     }
-  }, fileBuffer);
-
-  if (res.statusCode !== 201) {
-    throw new Error(`Failed to upload asset "${assetName}": HTTP ${res.statusCode} — ${res.data}`);
   }
-
-  return res.json;
 }
 
 /**
@@ -448,12 +463,20 @@ export async function publishRelease(options = {}) {
     const existing = existingAssets.find((a) => a.name === target.name);
 
     if (existing) {
+      const localSize = fs.statSync(assetPath).size;
+      if (existing.size === localSize) {
+        console.log(`   ✔ Asset ${target.name} already attached and matches size (${existing.size} bytes). Skipping.`);
+        uploadedResults.push(existing);
+        continue;
+      }
+
       console.log(`   ♻ Found existing asset ${target.name} (ID: ${existing.id}). Deleting before upload...`);
       if (isDryRun) {
         console.log(`   [DRY RUN] Skipping DELETE /repos/${repo}/releases/assets/${existing.id}`);
       } else {
         await deleteAsset(repo, existing.id, token);
         console.log(`   ✔ Deleted duplicate asset ${existing.id}`);
+        await new Promise((r) => setTimeout(r, 1000));
       }
     }
 
