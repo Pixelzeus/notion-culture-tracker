@@ -56,8 +56,9 @@ const state = {
   isDirty: false,
   // Milestone 2: Template Builder State
   activeTemplateMedia: 'movie',
-  previewMode: 'data', // 'data' | 'tokens'
-  lastFocusedInput: null
+  previewMode: 'tokens', // 'tokens' (WYSIWYG) | 'data' (Aperçu Réel)
+  lastFocusedInput: null,
+  slashMenuTargetIndex: -1
 };
 
 // DOM references cache
@@ -179,6 +180,16 @@ function cacheDomElements() {
   dom.btnPreviewData = document.getElementById('btnPreviewData');
   dom.btnPreviewTokens = document.getElementById('btnPreviewTokens');
   dom.notionPreviewCanvas = document.getElementById('notionPreviewCanvas');
+  dom.notionEditorSurface = document.getElementById('notionEditorSurface');
+  dom.notionPreviewSurface = document.getElementById('notionPreviewSurface');
+  dom.btnTriggerSlashMenu = document.getElementById('btnTriggerSlashMenu');
+  dom.btnBottomAddBlock = document.getElementById('btnBottomAddBlock');
+  dom.notionSlashMenuOverlay = document.getElementById('notionSlashMenuOverlay');
+  dom.notionSlashMenu = document.getElementById('notionSlashMenu');
+  dom.notionPageCover = document.getElementById('notionPageCover');
+  dom.notionPageIconBadge = document.getElementById('notionPageIconBadge');
+  dom.notionPageHeading = document.getElementById('notionPageHeading');
+  dom.tabTemplates = document.getElementById('tabTemplates');
 
   // Tab 3: Diagnostics & Import/Export (Milestone 4)
   dom.btnRunDiagnostic = document.getElementById('btnRunDiagnostic') || document.getElementById('btnRunDiagnostics');
@@ -365,9 +376,36 @@ function setupEventListeners() {
     dom.paletteBtns.forEach(btn => {
       btn.addEventListener('click', () => {
         addBlockFromPalette(btn.dataset.blockType);
+        closeSlashMenu();
       });
     });
   }
+
+  if (dom.btnTriggerSlashMenu) {
+    dom.btnTriggerSlashMenu.addEventListener('click', () => {
+      openSlashMenu(0);
+    });
+  }
+
+  if (dom.btnBottomAddBlock) {
+    dom.btnBottomAddBlock.addEventListener('click', () => {
+      openSlashMenu(-1);
+    });
+  }
+
+  if (dom.notionSlashMenuOverlay) {
+    dom.notionSlashMenuOverlay.addEventListener('click', (e) => {
+      if (e.target === dom.notionSlashMenuOverlay) {
+        closeSlashMenu();
+      }
+    });
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && dom.notionSlashMenuOverlay && !dom.notionSlashMenuOverlay.classList.contains('hidden')) {
+      closeSlashMenu();
+    }
+  });
 
   if (dom.variableChipsBar) {
     dom.variableChipsBar.addEventListener('click', (e) => {
@@ -387,22 +425,28 @@ function setupEventListeners() {
     dom.templateBlocksContainer.addEventListener('input', handleBlockFieldInput);
     dom.templateBlocksContainer.addEventListener('change', handleBlockFieldInput);
     dom.templateBlocksContainer.addEventListener('click', handleBlockActionClick);
+    dom.templateBlocksContainer.addEventListener('keyup', (e) => {
+      if (e.key === '/' && e.target.matches('input[type="text"], textarea')) {
+        const val = e.target.value.trim();
+        if (val === '/') {
+          const blockRow = e.target.closest('.block-card');
+          const index = blockRow ? parseInt(blockRow.dataset.index, 10) : -1;
+          e.target.value = '';
+          e.target.dispatchEvent(new Event('input', { bubbles: true }));
+          openSlashMenu(index >= 0 ? index + 1 : -1);
+        }
+      }
+    });
   }
 
   if (dom.btnPreviewData) {
     dom.btnPreviewData.addEventListener('click', () => {
-      state.previewMode = 'data';
-      dom.btnPreviewData.classList.add('active');
-      if (dom.btnPreviewTokens) dom.btnPreviewTokens.classList.remove('active');
-      renderLivePreview();
+      setPreviewMode('data');
     });
   }
   if (dom.btnPreviewTokens) {
     dom.btnPreviewTokens.addEventListener('click', () => {
-      state.previewMode = 'tokens';
-      dom.btnPreviewTokens.classList.add('active');
-      if (dom.btnPreviewData) dom.btnPreviewData.classList.remove('active');
-      renderLivePreview();
+      setPreviewMode('tokens');
     });
   }
 
@@ -1277,6 +1321,7 @@ function renderAll() {
     syncSelectWithInput('unified', dom.unifiedDbIdInput?.value);
   }
   switchTemplateMedia(state.activeTemplateMedia);
+  setPreviewMode(state.previewMode || 'tokens');
 }
 
 // Dirty state & Save Handlers
@@ -1811,47 +1856,109 @@ const SAMPLE_PREVIEW_DATA = {
   movie: {
     title: 'Inception',
     overview: 'Dom Cobb est un voleur expérimenté, le meilleur qui soit dans l\'art périlleux de l\'extraction : voler les secrets les plus précieux enfouis au plus profond du subconscient pendant qu\'une personne rêve.',
+    summary: 'Dom Cobb est un voleur expérimenté, le meilleur qui soit dans l\'art périlleux de l\'extraction : voler les secrets les plus précieux enfouis au plus profond du subconscient pendant qu\'une personne rêve.',
     releaseDate: '2010-07-16',
     year: '2010',
     rating: '8.8',
+    score: '8.8',
     genres: 'Science-Fiction, Action, Thriller',
     cast: 'Leonardo DiCaprio, Joseph Gordon-Levitt, Elliot Page, Tom Hardy',
+    casts: 'Leonardo DiCaprio, Joseph Gordon-Levitt, Elliot Page, Tom Hardy',
     posterUrl: 'https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg',
     backdropUrl: 'https://image.tmdb.org/t/p/w1280/s3TBrRGB1iav7gFOCNx3H31MoES.jpg',
     platform: 'Netflix',
-    status: '🟢 Watched',
+    status: '🟢 Vu',
     notes: 'Chef-d\'œuvre absolu de Christopher Nolan avec une bande-son magistrale de Hans Zimmer.'
   },
   tv: {
     title: 'Breaking Bad',
     overview: 'Walter White, un professeur de chimie de lycée surqualifié et sous-payé, apprend qu\'il est atteint d\'un cancer du poumon en phase terminale. Pour subvenir aux besoins de sa famille, il s\'associe avec son ancien élève Jesse Pinkman pour fabriquer et vendre de la méthamphétamine.',
+    summary: 'Walter White, un professeur de chimie de lycée surqualifié et sous-payé, apprend qu\'il est atteint d\'un cancer du poumon en phase terminale. Pour subvenir aux besoins de sa famille, il s\'associe avec son ancien élève Jesse Pinkman pour fabriquer et vendre de la méthamphétamine.',
     releaseDate: '2008-01-20',
     year: '2008',
     rating: '9.5',
+    score: '9.5',
     genres: 'Drame, Crime, Thriller',
     cast: 'Bryan Cranston, Aaron Paul, Anna Gunn, Dean Norris',
+    casts: 'Bryan Cranston, Aaron Paul, Anna Gunn, Dean Norris',
     posterUrl: 'https://image.tmdb.org/t/p/w500/ggFHVNu6YYI5L9pCfOacjizRGt.jpg',
     backdropUrl: 'https://image.tmdb.org/t/p/w1280/tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg',
     platform: 'Netflix',
-    status: '🟢 Watched',
+    status: '🟢 Terminé',
     totalEp: '62',
     notes: 'Une des plus grandes séries télévisées de tous les temps.'
   },
   game: {
-    title: 'The Legend of Zelda: Breath of the Wild',
-    overview: 'Après un sommeil de 100 ans, Link se réveille seul dans un monde qu\'il ne reconnaît plus. Le héros légendaire doit désormais explorer un vaste et dangereux royaume et retrouver ses souvenirs avant qu\'Hyrule ne soit perdue à jamais.',
-    releaseDate: '2017-03-03',
-    year: '2017',
-    rating: '9.7',
-    genres: 'Action-Aventure, Monde Ouvert',
-    cast: 'Nintendo EPD, Eiji Aonuma, Hidemaro Fujibayashi',
+    title: 'The Witcher 3: Wild Hunt',
+    overview: 'Geralt de Riv, un chasseur de monstres mutant, recherche sa fille adoptive Ciri à travers un vaste monde ouvert ravagé par la guerre et traqué par la redoutable Chasse Sauvage.',
+    summary: 'Geralt de Riv, un chasseur de monstres mutant, recherche sa fille adoptive Ciri à travers un vaste monde ouvert ravagé par la guerre et traqué par la redoutable Chasse Sauvage.',
+    releaseDate: '2015-05-19',
+    year: '2015',
+    rating: '9.8',
+    score: '9.8',
+    genres: 'Action-RPG, Monde Ouvert, Dark Fantasy',
+    cast: 'CD Projekt RED, Doug Cockle, Denise Gough',
+    casts: 'CD Projekt RED, Doug Cockle, Denise Gough',
     posterUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co1r7f.png',
     backdropUrl: 'https://images.igdb.com/igdb/image/upload/t_1080p/sc6qq9.jpg',
-    platform: 'Nintendo Switch',
-    status: '🟢 Completed',
-    notes: 'Révolution du genre open-world.'
+    platform: 'PC / PS5',
+    status: '🟢 Terminé',
+    notes: 'Révolution du genre open-world RPG avec une écriture exceptionnelle.'
   }
 };
+
+/**
+ * Bascule entre le mode Édition WYSIWYG et l'Aperçu Données Réelles
+ */
+function setPreviewMode(mode) {
+  state.previewMode = mode;
+
+  if (dom.btnPreviewTokens) {
+    dom.btnPreviewTokens.classList.toggle('active', mode === 'tokens');
+  }
+  if (dom.btnPreviewData) {
+    dom.btnPreviewData.classList.toggle('active', mode === 'data');
+  }
+
+  if (dom.tabTemplates) {
+    dom.tabTemplates.classList.toggle('mode-edit', mode === 'tokens');
+    dom.tabTemplates.classList.toggle('mode-preview', mode === 'data');
+  }
+
+  if (dom.notionEditorSurface) {
+    dom.notionEditorSurface.style.display = mode === 'tokens' ? 'block' : 'none';
+  }
+  if (dom.notionPreviewSurface) {
+    dom.notionPreviewSurface.style.display = mode === 'data' ? 'block' : 'none';
+  }
+
+  renderLivePreview();
+}
+
+/**
+ * Ouvre le Notion Slash Menu Popover
+ * @param {number} targetIndex - Position d'insertion (-1 pour la fin)
+ */
+function openSlashMenu(targetIndex = -1) {
+  state.slashMenuTargetIndex = targetIndex;
+  if (dom.notionSlashMenuOverlay) {
+    dom.notionSlashMenuOverlay.classList.remove('hidden');
+    const firstItem = dom.notionSlashMenu?.querySelector('.slash-menu-item');
+    if (firstItem) {
+      firstItem.focus();
+    }
+  }
+}
+
+/**
+ * Ferme le Notion Slash Menu Popover
+ */
+function closeSlashMenu() {
+  state.slashMenuTargetIndex = -1;
+  if (dom.notionSlashMenuOverlay) {
+    dom.notionSlashMenuOverlay.classList.add('hidden');
+  }
+}
 
 function switchTemplateMedia(media) {
   state.activeTemplateMedia = media;
@@ -1867,8 +1974,27 @@ function switchTemplateMedia(media) {
   }
 
   const mediaLabels = { movie: 'Films', tv: 'Séries TV', game: 'Jeux Vidéo' };
+  const mediaEmojis = { movie: '🎬', tv: '📺', game: '🎮' };
+
   if (dom.previewMediaBadge) {
     dom.previewMediaBadge.textContent = mediaLabels[media] || media;
+  }
+
+  if (dom.notionPageIconBadge) {
+    dom.notionPageIconBadge.textContent = mediaEmojis[media] || '📄';
+  }
+
+  if (dom.notionPageHeading) {
+    dom.notionPageHeading.textContent = `Modèle de Page : ${mediaLabels[media] || media}`;
+  }
+
+  if (dom.notionPageCover) {
+    const backdrop = SAMPLE_PREVIEW_DATA[media]?.backdropUrl;
+    if (backdrop) {
+      dom.notionPageCover.style.backgroundImage = `url('${backdrop}')`;
+    } else {
+      dom.notionPageCover.style.backgroundImage = '';
+    }
   }
 
   const mediaCfg = state.schema.mediaTypes?.[media] || {};
@@ -1908,7 +2034,7 @@ function handlePresetSelection(presetKey) {
   }
 }
 
-function addBlockFromPalette(blockType) {
+function addBlockFromPalette(blockType, insertIndex = null) {
   const media = state.activeTemplateMedia;
   const mediaCfg = state.schema.mediaTypes?.[media];
   if (!mediaCfg) return;
@@ -1916,6 +2042,11 @@ function addBlockFromPalette(blockType) {
   if (!Array.isArray(mediaCfg.templateBlocks)) {
     mediaCfg.templateBlocks = [];
   }
+
+  const targetIdx = (insertIndex !== null && insertIndex !== undefined)
+    ? insertIndex
+    : (state.slashMenuTargetIndex >= 0 ? state.slashMenuTargetIndex : -1);
+  state.slashMenuTargetIndex = -1;
 
   const newId = `blk_${Date.now().toString(36)}_${Math.random().toString(36).substr(2, 4)}`;
   let newBlock = null;
@@ -1931,7 +2062,7 @@ function addBlockFromPalette(blockType) {
       newBlock = { id: newId, type: 'heading_3', content: '', color: 'default', bold: false };
       break;
     case 'paragraph':
-      newBlock = { id: newId, type: 'paragraph', content: '' };
+      newBlock = { id: newId, type: 'paragraph', content: '', color: 'default' };
       break;
     case 'callout':
       newBlock = { id: newId, type: 'callout', content: '', emoji: '📌', color: 'default' };
@@ -1948,7 +2079,7 @@ function addBlockFromPalette(blockType) {
       };
       break;
     case 'toggle':
-      newBlock = { id: newId, type: 'toggle', title: 'Titre déroulant', color: 'default', children: [] };
+      newBlock = { id: newId, type: 'toggle', title: 'Titre déroulant', color: 'default', children: [{ id: `${newId}_t1`, type: 'bullet', content: '' }] };
       break;
     case 'image':
       newBlock = { id: newId, type: 'image', url: '{{posterUrl}}' };
@@ -1957,10 +2088,15 @@ function addBlockFromPalette(blockType) {
       newBlock = { id: newId, type: 'divider' };
       break;
     default:
-      newBlock = { id: newId, type: 'paragraph', content: '' };
+      newBlock = { id: newId, type: 'paragraph', content: '', color: 'default' };
   }
 
-  mediaCfg.templateBlocks.push(newBlock);
+  if (targetIdx >= 0 && targetIdx <= mediaCfg.templateBlocks.length) {
+    mediaCfg.templateBlocks.splice(targetIdx, 0, newBlock);
+  } else {
+    mediaCfg.templateBlocks.push(newBlock);
+  }
+
   mediaCfg.template = 'custom';
   if (dom.templatePresetSelector) {
     dom.templatePresetSelector.value = 'custom';
@@ -1989,7 +2125,7 @@ function insertVariableToken(token) {
     target.dispatchEvent(new Event('input', { bubbles: true }));
     showToast(`Variable ${token} insérée !`, 'info');
   } else {
-    showToast(`Cliquez d'abord dans un champ texte pour y insérer ${token}.`, 'warning');
+    showToast(`Cliquez d'abord dans un champ de bloc pour y insérer ${token}.`, 'warning');
   }
 }
 
@@ -2062,7 +2198,10 @@ function handleBlockActionClick(e) {
   if (!mediaCfg || !mediaCfg.templateBlocks) return;
   const blocks = mediaCfg.templateBlocks;
 
-  if (action === 'move-up') {
+  if (action === 'open-slash-at') {
+    const index = parseInt(target.dataset.index, 10);
+    openSlashMenu(index + 1);
+  } else if (action === 'move-up') {
     const index = parseInt(target.dataset.index, 10);
     if (index > 0) {
       const temp = blocks[index];
@@ -2178,10 +2317,10 @@ function renderTemplateBlocksList() {
 
   if (blocks.length === 0) {
     dom.templateBlocksContainer.innerHTML = `
-      <div style="text-align: center; padding: 32px 16px; background: var(--bg-tertiary); border: 1px dashed var(--border-color); border-radius: var(--radius-md); color: var(--text-secondary);">
+      <div class="notion-preview-empty" style="text-align: center; padding: 36px 16px; background: var(--notion-card-bg, #202020); border: 1px dashed var(--notion-border, #2f2f2f); border-radius: 8px; color: var(--notion-text-muted, #9b9b9b);">
         <span style="font-size: 32px; display: block; margin-bottom: 8px;">📄</span>
-        <h4 style="margin: 0 0 6px; color: var(--text-primary); font-size: 14px;">Aucun bloc configuré</h4>
-        <p style="margin: 0; font-size: 12px;">Choisissez un modèle prédéfini ci-dessus ou ajoutez des blocs depuis la palette.</p>
+        <h4 style="margin: 0 0 6px; color: var(--notion-text-primary, #ffffff); font-size: 14px;">Aucun bloc configuré</h4>
+        <p style="margin: 0; font-size: 12.5px;">Sélectionnez un modèle prédéfini ci-dessus ou cliquez sur <strong>+ Ajouter un bloc</strong> pour concevoir votre fiche.</p>
       </div>
     `;
     return;
@@ -2210,7 +2349,7 @@ function renderTemplateBlocksList() {
       badge = `H${level} Titre`;
       fieldsHtml = `
         <div class="block-field-row">
-          <input type="text" class="block-input" data-action="edit-block" data-field="content" data-index="${i}" value="${escapeHtml(b.content || '')}" placeholder="Texte du titre (ex: {{title}} ou Screenshots)">
+          <input type="text" class="block-input notion-inline-input" data-action="edit-block" data-field="content" data-index="${i}" value="${escapeHtml(b.content || '')}" placeholder="Texte du titre (ex: {{title}} ou Screenshots)">
           <select class="block-select" data-action="edit-block" data-field="level" data-index="${i}" style="width: 75px;">
             <option value="1" ${level === 1 ? 'selected' : ''}>H1</option>
             <option value="2" ${level === 2 ? 'selected' : ''}>H2</option>
@@ -2219,7 +2358,7 @@ function renderTemplateBlocksList() {
           <select class="block-select" data-action="edit-block" data-field="color" data-index="${i}" style="width: 110px;">
             ${colorOptions(b.color || 'default')}
           </select>
-          <label style="display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-secondary); cursor: pointer; white-space: nowrap;">
+          <label style="display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--notion-text-secondary, #9b9b9b); cursor: pointer; white-space: nowrap;">
             <input type="checkbox" data-action="edit-block" data-field="bold" data-index="${i}" ${b.bold ? 'checked' : ''}>
             <span>Gras</span>
           </label>
@@ -2228,38 +2367,45 @@ function renderTemplateBlocksList() {
     } else if (b.type === 'paragraph') {
       badge = '📝 Paragraphe';
       fieldsHtml = `
-        <textarea class="block-textarea" data-action="edit-block" data-field="content" data-index="${i}" placeholder="Texte du paragraphe (ex: {{overview}})">${escapeHtml(b.content || '')}</textarea>
+        <div class="block-field-row">
+          <textarea class="block-textarea notion-inline-input" data-action="edit-block" data-field="content" data-index="${i}" placeholder="Texte du paragraphe (ex: {{overview}} ou tapez / pour insérer)...">${escapeHtml(b.content || '')}</textarea>
+          <select class="block-select" data-action="edit-block" data-field="color" data-index="${i}" style="width: 110px; align-self: flex-start;">
+            ${colorOptions(b.color || 'default')}
+          </select>
+        </div>
       `;
     } else if (b.type === 'callout') {
       badge = '📌 Callout';
       fieldsHtml = `
         <div class="block-field-row" style="margin-bottom: 6px;">
-          <input type="text" class="block-input" data-action="edit-block" data-field="emoji" data-index="${i}" value="${escapeHtml(b.emoji || '📌')}" style="width: 50px; text-align: center;" title="Icône émoji">
+          <input type="text" class="block-input" data-action="edit-block" data-field="emoji" data-index="${i}" value="${escapeHtml(b.emoji || '📌')}" style="width: 50px; text-align: center; font-size: 16px;" title="Icône émoji">
           <select class="block-select" data-action="edit-block" data-field="color" data-index="${i}" style="width: 140px;">
             ${colorOptions(b.color || 'default')}
           </select>
         </div>
-        <textarea class="block-textarea" data-action="edit-block" data-field="content" data-index="${i}" placeholder="Contenu du callout (ex: {{overview}})">${escapeHtml(b.content || '')}</textarea>
+        <textarea class="block-textarea notion-inline-input" data-action="edit-block" data-field="content" data-index="${i}" placeholder="Contenu du callout (ex: {{overview}})...">${escapeHtml(b.content || '')}</textarea>
       `;
     } else if (b.type === 'image') {
       badge = '🖼️ Image';
       fieldsHtml = `
         <div class="block-field-row" style="margin-bottom: 6px;">
-          <input type="text" class="block-input" data-action="edit-block" data-field="url" data-index="${i}" value="${escapeHtml(b.url || '')}" placeholder="URL d'image ou {{posterUrl}}">
+          <input type="text" class="block-input notion-inline-input" data-action="edit-block" data-field="url" data-index="${i}" value="${escapeHtml(b.url || '')}" placeholder="URL d'image ou {{posterUrl}}">
         </div>
-        <div style="display: flex; gap: 6px;">
-          <button type="button" class="btn btn-secondary" data-action="set-image-url" data-index="${i}" data-val="{{posterUrl}}" style="padding: 4px 8px; font-size: 11px; min-height: 28px;">
+        <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+          <button type="button" class="btn btn-secondary" data-action="set-image-url" data-index="${i}" data-val="{{posterUrl}}" style="padding: 4px 10px; font-size: 11.5px; min-height: 28px;">
             🖼️ Affiche {{posterUrl}}
           </button>
-          <button type="button" class="btn btn-secondary" data-action="set-image-url" data-index="${i}" data-val="{{backdropUrl}}" style="padding: 4px 8px; font-size: 11px; min-height: 28px;">
-            🌄 Bannière {{backdropUrl}}
+          <button type="button" class="btn btn-secondary" data-action="set-image-url" data-index="${i}" data-val="{{backdropUrl}}" style="padding: 4px 10px; font-size: 11.5px; min-height: 28px;">
+            🌅 Bannière {{backdropUrl}}
           </button>
+          ${b.url && b.url.startsWith('http') ? `<img src="${escapeHtml(b.url)}" alt="thumbnail" style="height: 30px; border-radius: 4px; border: 1px solid var(--notion-border, #2f2f2f); margin-left: auto;">` : ''}
         </div>
       `;
     } else if (b.type === 'divider') {
       badge = '── Séparateur';
       fieldsHtml = `
-        <div style="padding: 8px 0; color: var(--text-muted); font-size: 12px; font-style: italic;">
+        <div class="notion-block-divider" style="margin: 8px 0;"></div>
+        <div style="color: var(--notion-text-muted, #777); font-size: 11.5px; font-style: italic;">
           Ligne de séparation horizontale Notion
         </div>
       `;
@@ -2268,26 +2414,34 @@ function renderTemplateBlocksList() {
       const children = Array.isArray(b.children) ? b.children : [];
       const childrenHtml = children.map((child, cIdx) => `
         <div class="block-field-row" style="margin-bottom: 4px;">
-          <span style="font-size: 11px; color: var(--text-secondary); width: 14px;">•</span>
-          <input type="text" class="block-input" data-action="edit-toggle-child" data-parent-index="${i}" data-child-index="${cIdx}" data-field="content" value="${escapeHtml(child.content || '')}" placeholder="Élément de liste">
+          <span style="font-size: 11px; color: var(--notion-text-secondary, #9b9b9b); width: 14px;">•</span>
+          <input type="text" class="block-input notion-inline-input" data-action="edit-toggle-child" data-parent-index="${i}" data-child-index="${cIdx}" data-field="content" value="${escapeHtml(child.content || '')}" placeholder="Élément de liste">
           <button type="button" class="btn-block-action btn-delete" data-action="delete-toggle-child" data-parent-index="${i}" data-child-index="${cIdx}" title="Supprimer cet élément">🗑️</button>
         </div>
       `).join('');
 
       fieldsHtml = `
-        <div class="block-field-row" style="margin-bottom: 8px;">
-          <input type="text" class="block-input" data-action="edit-block" data-field="title" data-index="${i}" value="${escapeHtml(b.title || '')}" placeholder="Titre du toggle">
-          <select class="block-select" data-action="edit-block" data-field="color" data-index="${i}" style="width: 120px;">
-            ${colorOptions(b.color || 'default')}
-          </select>
-        </div>
-        <div class="toggle-children-container">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <span style="font-size: 11px; font-weight: 600; color: var(--text-secondary);">Sous-éléments dépliants (${children.length}) :</span>
-            <button type="button" class="btn btn-secondary" data-action="add-toggle-child" data-parent-index="${i}" style="padding: 2px 8px; font-size: 11px; min-height: 24px;">+ Puce</button>
+        <details class="notion-block-toggle" open>
+          <summary>
+            <span class="arrow">▶</span>
+            <span style="font-weight: 600; font-size: 13px;">${escapeHtml(b.title || 'Titre déroulant')}</span>
+          </summary>
+          <div class="toggle-content">
+            <div class="block-field-row" style="margin: 8px 0;">
+              <input type="text" class="block-input notion-inline-input" data-action="edit-block" data-field="title" data-index="${i}" value="${escapeHtml(b.title || '')}" placeholder="Titre du toggle">
+              <select class="block-select" data-action="edit-block" data-field="color" data-index="${i}" style="width: 120px;">
+                ${colorOptions(b.color || 'default')}
+              </select>
+            </div>
+            <div class="toggle-children-container">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span style="font-size: 11px; font-weight: 600; color: var(--notion-text-secondary, #9b9b9b);">Sous-éléments dépliants (${children.length}) :</span>
+                <button type="button" class="btn btn-secondary" data-action="add-toggle-child" data-parent-index="${i}" style="padding: 2px 8px; font-size: 11px; min-height: 24px;">+ Puce</button>
+              </div>
+              ${childrenHtml || '<div style="font-size: 11px; color: var(--notion-text-muted, #777); font-style: italic;">Aucun sous-élément (toggle vide)</div>'}
+            </div>
           </div>
-          ${childrenHtml || '<div style="font-size: 11px; color: var(--text-muted); font-style: italic;">Aucun sous-élément (toggle vide)</div>'}
-        </div>
+        </details>
       `;
     } else if (b.type === 'column_list' || b.type === 'columns') {
       badge = '▥ 2 Colonnes';
@@ -2304,17 +2458,17 @@ function renderTemplateBlocksList() {
 
         let subInput = '';
         if (sub.type === 'image') {
-          subInput = `<input type="text" class="block-input" data-action="edit-col-sub" data-parent-index="${i}" data-col-index="${colIdx}" data-sub-index="${sIdx}" data-field="url" value="${escapeHtml(sub.url || '')}" placeholder="URL image">`;
+          subInput = `<input type="text" class="block-input notion-inline-input" data-action="edit-col-sub" data-parent-index="${i}" data-col-index="${colIdx}" data-sub-index="${sIdx}" data-field="url" value="${escapeHtml(sub.url || '')}" placeholder="URL image">`;
         } else if (sub.type === 'toggle') {
-          subInput = `<input type="text" class="block-input" data-action="edit-col-sub" data-parent-index="${i}" data-col-index="${colIdx}" data-sub-index="${sIdx}" data-field="title" value="${escapeHtml(sub.title || '')}" placeholder="Titre toggle">`;
+          subInput = `<input type="text" class="block-input notion-inline-input" data-action="edit-col-sub" data-parent-index="${i}" data-col-index="${colIdx}" data-sub-index="${sIdx}" data-field="title" value="${escapeHtml(sub.title || '')}" placeholder="Titre toggle">`;
         } else {
-          subInput = `<input type="text" class="block-input" data-action="edit-col-sub" data-parent-index="${i}" data-col-index="${colIdx}" data-sub-index="${sIdx}" data-field="content" value="${escapeHtml(sub.content || '')}" placeholder="Contenu...">`;
+          subInput = `<input type="text" class="block-input notion-inline-input" data-action="edit-col-sub" data-parent-index="${i}" data-col-index="${colIdx}" data-sub-index="${sIdx}" data-field="content" value="${escapeHtml(sub.content || '')}" placeholder="Contenu...">`;
         }
 
         return `
           <div class="sub-block-card">
             <div class="sub-block-header">
-              <span style="font-size: 10px; font-weight: 700; color: var(--accent-primary);">${subBadge}</span>
+              <span style="font-size: 10px; font-weight: 700; color: var(--notion-blue, #60a5fa);">${subBadge}</span>
               <button type="button" class="btn-block-action btn-delete" data-action="delete-col-child" data-parent-index="${i}" data-col-index="${colIdx}" data-sub-index="${sIdx}" style="min-width: 22px; min-height: 22px; font-size: 10px;" title="Supprimer ce sous-bloc">🗑️</button>
             </div>
             ${subInput}
@@ -2331,9 +2485,10 @@ function renderTemplateBlocksList() {
                 <button type="button" class="btn btn-secondary" data-action="add-col-child" data-parent-index="${i}" data-col-index="0" data-type="heading_2" style="padding: 2px 6px; font-size: 10px; min-height: 22px;">+H2</button>
                 <button type="button" class="btn btn-secondary" data-action="add-col-child" data-parent-index="${i}" data-col-index="0" data-type="image" style="padding: 2px 6px; font-size: 10px; min-height: 22px;">+Img</button>
                 <button type="button" class="btn btn-secondary" data-action="add-col-child" data-parent-index="${i}" data-col-index="0" data-type="paragraph" style="padding: 2px 6px; font-size: 10px; min-height: 22px;">+P</button>
+                <button type="button" class="btn btn-secondary" data-action="add-col-child" data-parent-index="${i}" data-col-index="0" data-type="callout" style="padding: 2px 6px; font-size: 10px; min-height: 22px;">+Call</button>
               </div>
             </div>
-            ${renderColChildren(col1Children, 0) || '<div style="font-size: 11px; color: var(--text-muted); font-style: italic;">Colonne 1 vide</div>'}
+            ${renderColChildren(col1Children, 0) || '<div style="font-size: 11px; color: var(--notion-text-muted, #777); font-style: italic;">Colonne 1 vide</div>'}
           </div>
 
           <div class="column-sub-box">
@@ -2341,28 +2496,37 @@ function renderTemplateBlocksList() {
               <span>Colonne Droite (${col2Children.length})</span>
               <div style="display: flex; gap: 4px;">
                 <button type="button" class="btn btn-secondary" data-action="add-col-child" data-parent-index="${i}" data-col-index="1" data-type="heading_2" style="padding: 2px 6px; font-size: 10px; min-height: 22px;">+H2</button>
+                <button type="button" class="btn btn-secondary" data-action="add-col-child" data-parent-index="${i}" data-col-index="1" data-type="image" style="padding: 2px 6px; font-size: 10px; min-height: 22px;">+Img</button>
                 <button type="button" class="btn btn-secondary" data-action="add-col-child" data-parent-index="${i}" data-col-index="1" data-type="paragraph" style="padding: 2px 6px; font-size: 10px; min-height: 22px;">+P</button>
                 <button type="button" class="btn btn-secondary" data-action="add-col-child" data-parent-index="${i}" data-col-index="1" data-type="toggle" style="padding: 2px 6px; font-size: 10px; min-height: 22px;">+Tog</button>
               </div>
             </div>
-            ${renderColChildren(col2Children, 1) || '<div style="font-size: 11px; color: var(--text-muted); font-style: italic;">Colonne 2 vide</div>'}
+            ${renderColChildren(col2Children, 1) || '<div style="font-size: 11px; color: var(--notion-text-muted, #777); font-style: italic;">Colonne 2 vide</div>'}
           </div>
         </div>
       `;
     }
 
     return `
-      <div class="block-card" data-block-id="${escapeHtml(b.id || '')}">
-        <div class="block-card-header">
-          <div class="block-type-badge">${badge}</div>
-          <div class="block-actions">
-            <button type="button" class="btn-block-action" data-action="move-up" data-index="${i}" ${isFirst ? 'disabled' : ''} title="Monter ce bloc">▲</button>
-            <button type="button" class="btn-block-action" data-action="move-down" data-index="${i}" ${isLast ? 'disabled' : ''} title="Descendre ce bloc">▼</button>
-            <button type="button" class="btn-block-action btn-delete" data-action="delete-block" data-index="${i}" title="Supprimer ce bloc">🗑️</button>
-          </div>
+      <div class="notion-block-row block-card" data-block-id="${escapeHtml(b.id || '')}" data-index="${i}">
+        <div class="notion-block-gutter">
+          <button type="button" class="notion-gutter-btn" data-action="open-slash-at" data-index="${i}" title="Insérer un bloc en dessous">+</button>
+          <button type="button" class="notion-gutter-btn" data-action="move-up" data-index="${i}" ${isFirst ? 'disabled' : ''} title="Monter">▲</button>
+          <button type="button" class="notion-gutter-btn" data-action="move-down" data-index="${i}" ${isLast ? 'disabled' : ''} title="Descendre">▼</button>
+          <button type="button" class="notion-gutter-btn btn-delete" data-action="delete-block" data-index="${i}" title="Supprimer">🗑️</button>
         </div>
-        <div class="block-fields">
-          ${fieldsHtml}
+        <div class="notion-block-content">
+          <div class="block-card-header">
+            <div class="block-type-badge">${badge}</div>
+            <div class="block-actions">
+              <button type="button" class="btn-block-action" data-action="move-up" data-index="${i}" ${isFirst ? 'disabled' : ''} title="Monter">▲</button>
+              <button type="button" class="btn-block-action" data-action="move-down" data-index="${i}" ${isLast ? 'disabled' : ''} title="Descendre">▼</button>
+              <button type="button" class="btn-block-action btn-delete" data-action="delete-block" data-index="${i}" title="Supprimer">🗑️</button>
+            </div>
+          </div>
+          <div class="block-fields">
+            ${fieldsHtml}
+          </div>
         </div>
       </div>
     `;
@@ -2378,7 +2542,7 @@ function renderLivePreview() {
   const isEnabled = mediaCfg ? mediaCfg.usePageTemplate !== false : true;
   const blocks = mediaCfg?.templateBlocks || [];
   const sample = SAMPLE_PREVIEW_DATA[media] || SAMPLE_PREVIEW_DATA.movie;
-  const mode = state.previewMode || 'data';
+  const mode = state.previewMode || 'tokens';
 
   if (!isEnabled) {
     dom.notionPreviewCanvas.innerHTML = `
@@ -2399,7 +2563,7 @@ function renderLivePreview() {
       <div class="notion-preview-empty">
         <span style="font-size: 36px; display: block; margin-bottom: 8px;">📄</span>
         <h3 style="margin: 0 0 6px; font-size: 15px;">Page Notion Vierge</h3>
-        <p style="margin: 0; font-size: 13px;">Aucun bloc configuré dans ce modèle. Utilisez la palette pour concevoir votre fiche.</p>
+        <p style="margin: 0; font-size: 13px;">Aucun bloc configuré dans ce modèle. Utilisez le bouton Ajouter un bloc pour concevoir votre fiche.</p>
       </div>
     `;
     return;

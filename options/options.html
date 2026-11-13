@@ -385,164 +385,257 @@
       </section>
     </main>
 
-    <!-- TAB 2: Constructeur de Templates -->
-    <section id="tabTemplates" class="tab-content" role="tabpanel">
-      <!-- Media Type Subtabs & Master Controls -->
-      <div class="template-header-card config-card">
-        <div class="card-header">
-          <div>
-            <h2 class="card-title"><span>📄</span> Constructeur Visuel de Templates Notion</h2>
-            <p class="card-description">
-              Concevez bloc par bloc la structure de page créée dans Notion pour chaque média avec aperçu interactif en temps réel.
-            </p>
+    <!-- TAB 2: Constructeur de Templates Notion (Document Canvas Experience) -->
+    <section id="tabTemplates" class="tab-content notion-template-tab" role="tabpanel">
+
+      <!-- Notion Top Command Bar / Controls -->
+      <div class="notion-app-header">
+        <div class="notion-header-top">
+          <div class="notion-breadcrumbs">
+            <span class="notion-crumb-root">Culture Tracker</span>
+            <span class="notion-crumb-sep">/</span>
+            <span class="notion-crumb-current">Modèles de Page Notion</span>
+          </div>
+
+          <!-- Master Controls Bar (Toggle, Presets, Mode Switch) -->
+          <div class="notion-header-actions">
+            <!-- Mode Switch: Édition WYSIWYG vs Aperçu Données Réelles -->
+            <div class="notion-mode-switcher" role="group" aria-label="Mode d'affichage">
+              <button type="button" class="btn-mode-toggle active" id="btnPreviewTokens" title="Mode Édition WYSIWYG : modifiez et réordonnez les blocs directement sur la page">
+                <span class="mode-icon">✏️</span>
+                <span class="mode-text">Édition WYSIWYG</span>
+              </button>
+              <button type="button" class="btn-mode-toggle" id="btnPreviewData" title="Aperçu Données Réelles : visualisez la fiche avec des métadonnées et affiches réelles">
+                <span class="mode-icon">✨</span>
+                <span class="mode-text">Aperçu Réel</span>
+              </button>
+            </div>
+
+            <!-- Master Toggle -->
+            <div class="template-toggle-control notion-toggle-control">
+              <label class="switch-label notion-switch" for="tplMasterToggle" title="Activer ou désactiver la création du corps de page dans Notion">
+                <input type="checkbox" id="tplMasterToggle" class="toggle-checkbox" checked>
+                <span class="switch-slider"></span>
+                <span class="toggle-text"><strong>Corps de page Notion</strong></span>
+              </label>
+            </div>
           </div>
         </div>
 
-        <!-- Sub-tabs: Films, Séries TV, Jeux Vidéo -->
-        <div class="media-subtabs template-media-subtabs" role="tablist">
-          <button type="button" class="subtab-btn active" id="tplSubtabBtnMovie" data-media="movie" role="tab" aria-selected="true">
-            <span>🎬</span> Modèle Films
-          </button>
-          <button type="button" class="subtab-btn" id="tplSubtabBtnTv" data-media="tv" role="tab" aria-selected="false">
-            <span>📺</span> Modèle Séries TV
-          </button>
-          <button type="button" class="subtab-btn" id="tplSubtabBtnGame" data-media="game" role="tab" aria-selected="false">
-            <span>🎮</span> Modèle Jeux Vidéo
-          </button>
-        </div>
-
-        <!-- Top Controls: Master Toggle & Preset Selector -->
-        <div class="template-controls-bar">
-          <div class="template-toggle-control">
-            <label class="switch-label" for="tplMasterToggle">
-              <input type="checkbox" id="tplMasterToggle" class="toggle-checkbox" checked>
-              <span class="switch-slider"></span>
-              <span class="toggle-text"><strong>Générer le corps de page Notion</strong> (usePageTemplate)</span>
-            </label>
+        <!-- Notion Views / Media Subtabs Bar & Preset Selector -->
+        <div class="notion-views-bar">
+          <div class="media-subtabs template-media-subtabs notion-subtabs" role="tablist">
+            <button type="button" class="subtab-btn active notion-subtab-btn" id="tplSubtabBtnMovie" data-media="movie" role="tab" aria-selected="true">
+              <span class="subtab-emoji">🎬</span>
+              <span class="subtab-label">Modèle Films</span>
+            </button>
+            <button type="button" class="subtab-btn notion-subtab-btn" id="tplSubtabBtnTv" data-media="tv" role="tab" aria-selected="false">
+              <span class="subtab-emoji">📺</span>
+              <span class="subtab-label">Modèle Séries TV</span>
+            </button>
+            <button type="button" class="subtab-btn notion-subtab-btn" id="tplSubtabBtnGame" data-media="game" role="tab" aria-selected="false">
+              <span class="subtab-emoji">🎮</span>
+              <span class="subtab-label">Modèle Jeux Vidéo</span>
+            </button>
           </div>
 
-          <div class="template-preset-control">
-            <label for="templatePresetSelector" class="preset-label">Modèle prédéfini :</label>
-            <select id="templatePresetSelector" class="form-select">
-              <option value="movie-default">Films par défaut (2 colonnes & affiche)</option>
-              <option value="tv-default">Séries par défaut (2 colonnes & affiche)</option>
-              <option value="game-default">Jeux par défaut (2 colonnes & guides)</option>
-              <option value="simple-summary">Résumé simple (Callout & image)</option>
-              <option value="blank">Page vierge (aucun bloc)</option>
-              <option value="custom">Modèle personnalisé</option>
-            </select>
-            <button type="button" id="btnResetTemplatePreset" class="btn btn-secondary" title="Rétablir ce média à son modèle prédéfini d'origine">
-              <span>🔄</span> Rétablir par défaut
+          <!-- Preset Controls & Badge Stats -->
+          <div class="notion-preset-group">
+            <div class="template-preset-control notion-preset-control">
+              <label for="templatePresetSelector" class="preset-label notion-label">Modèle :</label>
+              <select id="templatePresetSelector" class="form-select notion-select">
+                <option value="movie-default">Films par défaut (2 colonnes & affiche)</option>
+                <option value="tv-default">Séries par défaut (2 colonnes & affiche)</option>
+                <option value="game-default">Jeux par défaut (2 colonnes & guides)</option>
+                <option value="simple-summary">Résumé simple (Callout & image)</option>
+                <option value="blank">Page vierge (aucun bloc)</option>
+                <option value="custom">Modèle personnalisé</option>
+              </select>
+              <button type="button" id="btnResetTemplatePreset" class="btn btn-secondary btn-notion-icon" title="Rétablir ce média à son modèle prédéfini d'origine">
+                <span>🔄</span> Rétablir
+              </button>
+            </div>
+
+            <div class="notion-badge-stats">
+              <span class="preview-badge" id="previewMediaBadge">Films</span>
+              <span class="notion-count-badge"><span id="tplBlockCount">0</span> bloc(s)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notion Variable Pills Toolbar -->
+        <div class="variable-chips-section notion-variable-toolbar" id="variableChipsBarContainer">
+          <div class="variable-toolbar-intro">
+            <span class="chips-title notion-chips-title">🏷️ Variables dynamiques :</span>
+            <span class="chips-hint">Cliquez sur un jeton pour l'insérer dans le champ actif</span>
+          </div>
+          <div class="chips-container notion-chips-scroll" id="variableChipsBar">
+            <button type="button" class="chip-btn notion-pill-btn" data-token="{{title}}" title="Titre de l'œuvre">
+              <span class="pill-dot pill-blue"></span>{{title}}
+            </button>
+            <button type="button" class="chip-btn notion-pill-btn" data-token="{{overview}}" title="Synopsis / Résumé complet">
+              <span class="pill-dot pill-purple"></span>{{overview}}
+            </button>
+            <button type="button" class="chip-btn notion-pill-btn" data-token="{{rating}}" title="Note globale">
+              <span class="pill-dot pill-yellow"></span>{{rating}}
+            </button>
+            <button type="button" class="chip-btn notion-pill-btn" data-token="{{releaseDate}}" title="Date de sortie (YYYY-MM-DD)">
+              <span class="pill-dot pill-green"></span>{{releaseDate}}
+            </button>
+            <button type="button" class="chip-btn notion-pill-btn" data-token="{{genres}}" title="Liste des genres">
+              <span class="pill-dot pill-orange"></span>{{genres}}
+            </button>
+            <button type="button" class="chip-btn notion-pill-btn" data-token="{{cast}}" title="Acteurs / Équipe">
+              <span class="pill-dot pill-pink"></span>{{cast}}
+            </button>
+            <button type="button" class="chip-btn notion-pill-btn" data-token="{{posterUrl}}" title="URL de l'affiche verticale">
+              <span class="pill-dot pill-cyan"></span>{{posterUrl}}
+            </button>
+            <button type="button" class="chip-btn notion-pill-btn" data-token="{{backdropUrl}}" title="URL de la bannière horizontale">
+              <span class="pill-dot pill-gray"></span>{{backdropUrl}}
             </button>
           </div>
         </div>
       </div>
 
-      <!-- Split Pane Builder: Left Editor / Right Live Preview -->
-      <div class="template-builder-split">
-        <!-- LEFT PANE: Palette & Block List Editor -->
-        <div class="template-editor-pane">
-          <!-- Palette Toolbar Card -->
-          <div class="config-card palette-card">
-            <div class="palette-header">
-              <h3 class="palette-title"><span>🎨</span> Palette de Blocs Notion</h3>
-              <span class="palette-subtitle">Cliquez pour ajouter au modèle</span>
-            </div>
-            <div class="palette-grid">
-              <button type="button" class="btn-palette" id="btnPaletteH1" data-block-type="heading_1" title="Ajouter un Titre Principal H1">
-                <span class="palette-icon">H1</span>
-                <span class="palette-name">Titre H1</span>
-              </button>
-              <button type="button" class="btn-palette" id="btnPaletteH2" data-block-type="heading_2" title="Ajouter un Titre de Section H2">
-                <span class="palette-icon">H2</span>
-                <span class="palette-name">Titre H2</span>
-              </button>
-              <button type="button" class="btn-palette" id="btnPaletteH3" data-block-type="heading_3" title="Ajouter un Sous-titre H3">
-                <span class="palette-icon">H3</span>
-                <span class="palette-name">Titre H3</span>
-              </button>
-              <button type="button" class="btn-palette" id="btnPaletteCallout" data-block-type="callout" title="Ajouter un Callout avec icône">
-                <span class="palette-icon">📌</span>
-                <span class="palette-name">Callout</span>
-              </button>
-              <button type="button" class="btn-palette" id="btnPaletteParagraph" data-block-type="paragraph" title="Ajouter un Paragraphe de texte">
-                <span class="palette-icon">📝</span>
-                <span class="palette-name">Paragraphe</span>
-              </button>
-              <button type="button" class="btn-palette" id="btnPaletteColumns" data-block-type="column_list" title="Ajouter une structure 2 Colonnes">
-                <span class="palette-icon">▥</span>
-                <span class="palette-name">2 Colonnes</span>
-              </button>
-              <button type="button" class="btn-palette" id="btnPaletteToggle" data-block-type="toggle" title="Ajouter un Toggle déroulant">
-                <span class="palette-icon">▶</span>
-                <span class="palette-name">Toggle</span>
-              </button>
-              <button type="button" class="btn-palette" id="btnPaletteImage" data-block-type="image" title="Ajouter une Image externe">
-                <span class="palette-icon">🖼️</span>
-                <span class="palette-name">Image</span>
-              </button>
-              <button type="button" class="btn-palette" id="btnPaletteDivider" data-block-type="divider" title="Ajouter un Séparateur horizontal">
-                <span class="palette-icon">──</span>
-                <span class="palette-name">Séparateur</span>
-              </button>
-            </div>
+      <!-- Authentic Notion Document Canvas -->
+      <div class="notion-canvas-wrapper" id="notionCanvasWrapper">
+        <div class="notion-document-page">
 
-            <!-- Dynamic Variables Insertion Chips -->
-            <div class="variable-chips-section">
-              <div class="variable-chips-header">
-                <span class="chips-title">🏷️ Variables dynamiques (cliquez pour insérer dans le champ actif) :</span>
-              </div>
-              <div class="chips-container" id="variableChipsBar">
-                <button type="button" class="chip-btn" data-token="{{title}}" title="Titre de l'œuvre">{{title}}</button>
-                <button type="button" class="chip-btn" data-token="{{overview}}" title="Synopsis / Résumé">{{overview}}</button>
-                <button type="button" class="chip-btn" data-token="{{cast}}" title="Acteurs / Équipe">{{cast}}</button>
-                <button type="button" class="chip-btn" data-token="{{releaseDate}}" title="Date de sortie (YYYY-MM-DD)">{{releaseDate}}</button>
-                <button type="button" class="chip-btn" data-token="{{rating}}" title="Note globale">{{rating}}</button>
-                <button type="button" class="chip-btn" data-token="{{genres}}" title="Liste des genres">{{genres}}</button>
-                <button type="button" class="chip-btn" data-token="{{posterUrl}}" title="URL de l'affiche verticale">{{posterUrl}}</button>
-                <button type="button" class="chip-btn" data-token="{{backdropUrl}}" title="URL de la bannière horizontale">{{backdropUrl}}</button>
-              </div>
+          <!-- Notion Cover Artwork Header Preview -->
+          <div class="notion-page-cover" id="notionPageCover">
+            <div class="notion-cover-overlay"></div>
+            <div class="notion-cover-actions">
+              <span class="notion-cover-pill">🖼️ Bannière dynamique ({{backdropUrl}})</span>
             </div>
           </div>
 
-          <!-- Configured Blocks List Card -->
-          <div class="config-card blocks-list-card">
-            <div class="blocks-list-header">
-              <h3 class="blocks-list-title"><span>📋</span> Blocs du Modèle (<span id="tplBlockCount">0</span>)</h3>
-              <span class="blocks-list-hint">Réordonnez avec ▲ / ▼ ou supprimez avec 🗑️</span>
-            </div>
-
-            <div id="templateBlocksContainer" class="template-blocks-container">
-              <!-- Dynamically populated blocks -->
+          <!-- Notion Page Header: Icon Emoji & Document Title -->
+          <div class="notion-page-header">
+            <div class="notion-page-icon-badge" id="notionPageIconBadge" title="Icône de la page Notion">🎬</div>
+            <div class="notion-page-title-group">
+              <h1 class="notion-page-title" id="notionPageHeading">Modèle de Page : Films</h1>
+              <p class="notion-page-subtitle">Concevez directement vos blocs Notion. Cliquez sur '+' ou tapez '/' pour insérer un bloc.</p>
             </div>
           </div>
-        </div>
 
-        <!-- RIGHT PANE: Interactive Live DOM Preview -->
-        <div class="template-preview-pane">
-          <div class="config-card preview-card">
-            <div class="preview-header">
-              <div class="preview-title-group">
-                <h3 class="preview-title"><span>👁️</span> Aperçu Notion en Direct</h3>
-                <span class="preview-badge" id="previewMediaBadge">Films</span>
-              </div>
-              <div class="preview-mode-switch">
-                <button type="button" class="btn-mode-toggle active" id="btnPreviewData" title="Afficher avec données réelles simulées">
-                  <span>✨ Données réelles</span>
+          <!-- Document Canvas Body: Dual Mode Views -->
+          <div class="notion-page-content">
+
+            <!-- MODE 1: Interactive Notion Canvas WYSIWYG Editor (#templateBlocksContainer) -->
+            <div class="notion-editor-surface" id="notionEditorSurface">
+              <!-- Notion Block Quick Inserter / Slash Menu Launcher -->
+              <div class="notion-canvas-toolbar-action">
+                <button type="button" class="btn-notion-add-block" id="btnTriggerSlashMenu" title="Ouvrir le menu des blocs Notion">
+                  <span class="plus-icon">+</span>
+                  <span>Ajouter un bloc (ou tapez <kbd>/</kbd>)</span>
                 </button>
-                <button type="button" class="btn-mode-toggle" id="btnPreviewTokens" title="Afficher avec jetons {{variable}}">
-                  <span>🏷️ Variables brutes</span>
+              </div>
+
+              <!-- Blocks are rendered directly inside #templateBlocksContainer -->
+              <div id="templateBlocksContainer" class="template-blocks-container notion-blocks-canvas">
+                <!-- Dynamically populated blocks with Notion handles & styles -->
+              </div>
+
+              <!-- Bottom Add Block Prompt -->
+              <div class="notion-bottom-inserter" id="notionBottomInserter">
+                <button type="button" class="btn-notion-ghost-add" id="btnBottomAddBlock" title="Ajouter un bloc à la fin">
+                  <span class="plus-icon">+</span>
+                  <span>Cliquez pour ajouter un bloc ou tapez <kbd>/</kbd></span>
                 </button>
               </div>
             </div>
 
-            <!-- Simulated Notion Page Canvas -->
-            <div class="notion-preview-canvas" id="notionPreviewCanvas">
-              <!-- Rendered Notion DOM preview -->
+            <!-- MODE 2: Simulated Real Data Live Preview (#notionPreviewCanvas) -->
+            <div class="notion-preview-surface" id="notionPreviewSurface">
+              <div class="notion-preview-banner">
+                <span class="notion-preview-banner-badge">✨ Aperçu Données Réelles</span>
+                <span>Rendu en conditions réelles avec données d'exemple injectées</span>
+              </div>
+              <div class="notion-preview-canvas" id="notionPreviewCanvas">
+                <!-- Rendered Notion DOM preview with sample data -->
+              </div>
             </div>
+
           </div>
         </div>
       </div>
+
+      <!-- Notion Slash Menu Popover Modal / Dropdown -->
+      <div class="notion-slash-menu-overlay hidden" id="notionSlashMenuOverlay">
+        <div class="notion-slash-menu" id="notionSlashMenu" role="menu" aria-label="Menu des blocs Notion">
+          <div class="slash-menu-header">
+            <span class="slash-menu-title">BLOCS DE BASE NOTION</span>
+            <span class="slash-menu-hint">Échap pour fermer</span>
+          </div>
+          <div class="slash-menu-grid">
+            <button type="button" class="btn-palette slash-menu-item" id="btnPaletteParagraph" data-block-type="paragraph" role="menuitem">
+              <div class="slash-item-icon">📝</div>
+              <div class="slash-item-info">
+                <span class="slash-item-name">Texte / Paragraphe</span>
+                <span class="slash-item-desc">Rédigez du texte libre ou insérez des variables</span>
+              </div>
+            </button>
+            <button type="button" class="btn-palette slash-menu-item" id="btnPaletteH1" data-block-type="heading_1" role="menuitem">
+              <div class="slash-item-icon h-icon">H1</div>
+              <div class="slash-item-info">
+                <span class="slash-item-name">Titre 1</span>
+                <span class="slash-item-desc">Grand titre de section principale</span>
+              </div>
+            </button>
+            <button type="button" class="btn-palette slash-menu-item" id="btnPaletteH2" data-block-type="heading_2" role="menuitem">
+              <div class="slash-item-icon h-icon">H2</div>
+              <div class="slash-item-info">
+                <span class="slash-item-name">Titre 2</span>
+                <span class="slash-item-desc">Titre de section intermédiaire</span>
+              </div>
+            </button>
+            <button type="button" class="btn-palette slash-menu-item" id="btnPaletteH3" data-block-type="heading_3" role="menuitem">
+              <div class="slash-item-icon h-icon">H3</div>
+              <div class="slash-item-info">
+                <span class="slash-item-name">Titre 3</span>
+                <span class="slash-item-desc">Sous-titre ou intitulé de détail</span>
+              </div>
+            </button>
+            <button type="button" class="btn-palette slash-menu-item" id="btnPaletteCallout" data-block-type="callout" role="menuitem">
+              <div class="slash-item-icon">📌</div>
+              <div class="slash-item-info">
+                <span class="slash-item-name">Encadré / Callout</span>
+                <span class="slash-item-desc">Bloc mis en valeur avec icône émoji et fond doux</span>
+              </div>
+            </button>
+            <button type="button" class="btn-palette slash-menu-item" id="btnPaletteToggle" data-block-type="toggle" role="menuitem">
+              <div class="slash-item-icon">▶</div>
+              <div class="slash-item-info">
+                <span class="slash-item-name">Liste déroulante (Toggle)</span>
+                <span class="slash-item-desc">Masquez ou affichez du contenu enfant repliable</span>
+              </div>
+            </button>
+            <button type="button" class="btn-palette slash-menu-item" id="btnPaletteColumns" data-block-type="column_list" role="menuitem">
+              <div class="slash-item-icon">▥</div>
+              <div class="slash-item-info">
+                <span class="slash-item-name">2 Colonnes</span>
+                <span class="slash-item-desc">Disposition côte à côte avec colonnes 1 et 2</span>
+              </div>
+            </button>
+            <button type="button" class="btn-palette slash-menu-item" id="btnPaletteImage" data-block-type="image" role="menuitem">
+              <div class="slash-item-icon">🖼️</div>
+              <div class="slash-item-info">
+                <span class="slash-item-name">Image externe</span>
+                <span class="slash-item-desc">Affiche ou visuel depuis une URL ou variable</span>
+              </div>
+            </button>
+            <button type="button" class="btn-palette slash-menu-item" id="btnPaletteDivider" data-block-type="divider" role="menuitem">
+              <div class="slash-item-icon">──</div>
+              <div class="slash-item-info">
+                <span class="slash-item-name">Séparateur</span>
+                <span class="slash-item-desc">Ligne fine horizontale pour séparer visuellement</span>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+
     </section>
 
     <!-- TAB 3: Diagnostics & Sauvegarde -->
